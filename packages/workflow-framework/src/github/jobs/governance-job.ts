@@ -187,7 +187,7 @@ export function buildGovernanceJob(
  * @param lines  - Lines of the ESM script body.
  */
 function inlineScript(marker: string, lines: string[]): string {
-  const dest = `/tmp/_${marker.toLowerCase()}.mjs`;
+  const dest = `./_${marker.toLowerCase()}.mjs`;
   return [
     `cat << '${marker}' > ${dest}`,
     ...lines,

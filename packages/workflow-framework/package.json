@@ -1,6 +1,6 @@
 {
   "name": "@loanpro/devex-workflow-framework",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Golden Path CI/CD and CDK framework for LoanPro engineering teams",
   "type": "module",
   "main": "dist/index.js",
