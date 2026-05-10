@@ -130,13 +130,16 @@ export function buildDeployJob(
 // ---------------------------------------------------------------------------
 
 function emitAuditEventScript(envName: string): string {
-  const dest = `./_devex_emit_audit_${envName}.mjs`;
+  const marker = `DEVEX_EMIT_AUDIT_${envName.toUpperCase()}`;
   return [
-    `cat << 'DEVEX_EMIT_AUDIT_${envName.toUpperCase()}' > ${dest}`,
-    `import { createDeploymentAuditEvent, appendEventsToFile } from "@loanpro/devex-workflow-framework";`,
+    `node --input-type=module << '${marker}'`,
+    `import { appendFileSync, existsSync, mkdirSync } from "node:fs";`,
+    `import { dirname, resolve } from "node:path";`,
     `const outcome = process.env.DEPLOY_OUTCOME ?? "unknown";`,
     `const eventType = outcome === "success" ? "deployment_succeeded" : "deployment_failed";`,
-    `const event = createDeploymentAuditEvent({`,
+    `const event = {`,
+    `  schemaVersion: "1.0",`,
+    `  timestamp: new Date().toISOString(),`,
     `  eventType,`,
     `  actor: process.env.ACTOR ?? "",`,
     `  repository: process.env.REPOSITORY ?? "",`,
@@ -149,10 +152,12 @@ function emitAuditEventScript(envName: string): string {
     `  stage: "deploy-${envName}",`,
     `  result: outcome === "success" ? "success" : "failure",`,
     `  why: process.env.PR_URL ?? "",`,
-    `});`,
-    `appendEventsToFile([event]);`,
+    `};`,
+    `const outputPath = resolve("dora-events.ndjson");`,
+    `const dir = dirname(outputPath);`,
+    `if (!existsSync(dir)) { mkdirSync(dir, { recursive: true }); }`,
+    `appendFileSync(outputPath, JSON.stringify(event) + "\\n", "utf-8");`,
     `console.log("✓ Audit event emitted:", eventType);`,
-    `DEVEX_EMIT_AUDIT_${envName.toUpperCase()}`,
-    `node ${dest}`,
+    `${marker}`,
   ].join("\n");
 }
