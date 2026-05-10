@@ -29,6 +29,3 @@ export * from "./governance/work-id.js";
 // Adapters
 export * from "./adapters/language-adapter.js";
 export * from "./adapters/index.js";
-
-// Governance
-export * from "./governance/work-id.js";
