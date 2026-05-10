@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=./devex.schema.json
+# devex.yaml — Transactionify service configuration
+# This file is the integration contract between the service repository,
+# the devex CLI (Component A), and the workflow framework (Component B).
+# Validate locally with: devex check
+
+schemaVersion: 1
+
+service:
+  name: transactionify
+  owner: payments-platform
+  type: microservice
+
+workTracking:
+  workIdPattern: "^[A-Z]+-[0-9]+$"
+  branchPattern: "^(feature|fix|chore|hotfix)/[A-Z]+-[0-9]+-[a-z0-9-]+$"
+  commitPattern: "^\\[[A-Z]+-[0-9]+\\] .+"
+  prTitlePattern: "^\\[[A-Z]+-[0-9]+\\] .+"
+
+runtime:
+  appLanguage: python
+  infraLanguage: typescript
+  infraFramework: aws-cdk-typescript
+
+local:
+  testCommand: "uv run pytest"
+  lintCommand: "uv run ruff check ."
+  contractTestCommand: "uv run pytest tests/contracts"
+  propertyTestCommand: "uv run pytest tests/property"
+
+ci:
+  smallTests:
+    unit: "uv run pytest tests/unit"
+    property: "uv run pytest tests/property"
+    contract: "uv run pytest tests/contracts"
+    lint: "uv run ruff check ."
+  cdk:
+    workingDirectory: "infra"
+    synthCommand: "pnpm cdk synth"
+    diffCommand: "pnpm cdk diff"
+    deployCommand: "pnpm cdk deploy --require-approval never"
+
+environments:
+  sandbox:
+    awsRegion: us-east-1
+    cdkStack: TransactionifySandbox
+    githubEnvironment: sandbox
+  staging:
+    awsRegion: us-east-1
+    cdkStack: TransactionifyStaging
+    githubEnvironment: staging
+  production:
+    awsRegion: us-east-1
+    cdkStack: TransactionifyProduction
+    githubEnvironment: production
+
+telemetry:
+  sink: github-artifact
+  auditFormat: ndjson
+
+workflowVersion:
+  ref: v0.1.0

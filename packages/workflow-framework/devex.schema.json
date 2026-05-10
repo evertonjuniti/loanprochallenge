@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DevexConfig",
+  "description": "Configuration contract for the LoanPro Golden Path DevEx ecosystem (devex.yaml).",
+  "type": "object",
+  "required": ["schemaVersion", "service", "runtime", "environments"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [1],
+      "description": "Schema version. Must be 1."
+    },
+    "service": {
+      "type": "object",
+      "description": "Service metadata.",
+      "required": ["name", "owner"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Lowercase alphanumeric service name (hyphens allowed). E.g. transactionify."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Team or squad that owns this service."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["microservice", "library", "platform-tool", "data-pipeline", "monolith"],
+          "default": "microservice"
+        },
+        "repositoryUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical repository URL."
+        }
+      }
+    },
+    "workTracking": {
+      "type": "object",
+      "description": "Regex patterns for Work ID enforcement.",
+      "additionalProperties": false,
+      "properties": {
+        "workIdPattern": {
+          "type": "string",
+          "default": "^[A-Z]+-[0-9]+$",
+          "description": "Regex a bare Work ID must satisfy. E.g. FIN-123."
+        },
+        "branchPattern": {
+          "type": "string",
+          "default": "^(feature|fix|chore|hotfix)/[A-Z]+-[0-9]+-[a-z0-9-]+$",
+          "description": "Regex a branch name must satisfy."
+        },
+        "commitPattern": {
+          "type": "string",
+          "default": "^\\[[A-Z]+-[0-9]+\\] .+",
+          "description": "Regex each commit message first line must satisfy."
+        },
+        "prTitlePattern": {
+          "type": "string",
+          "default": "^\\[[A-Z]+-[0-9]+\\] .+",
+          "description": "Regex the PR title must satisfy."
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "description": "Language and infrastructure framework used by this service.",
+      "required": ["appLanguage"],
+      "additionalProperties": false,
+      "properties": {
+        "appLanguage": {
+          "type": "string",
+          "enum": ["python", "go", "typescript", "clojure", "java", "rust"],
+          "description": "Primary application language."
+        },
+        "infraLanguage": {
+          "type": "string",
+          "enum": ["typescript", "python", "go", "hcl", "none"],
+          "default": "typescript"
+        },
+        "infraFramework": {
+          "type": "string",
+          "enum": ["aws-cdk-typescript", "terraform", "pulumi", "none"],
+          "default": "aws-cdk-typescript"
+        }
+      }
+    },
+    "local": {
+      "type": "object",
+      "description": "Commands for local developer use (devex validate, pre-push hook).",
+      "additionalProperties": false,
+      "properties": {
+        "testCommand":         { "type": "string" },
+        "lintCommand":         { "type": "string" },
+        "contractTestCommand": { "type": "string" },
+        "propertyTestCommand": { "type": "string" }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "description": "CI stage configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "smallTests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "unit":      { "type": "string" },
+            "property":  { "type": "string" },
+            "contract":  { "type": "string" },
+            "lint":      { "type": "string" },
+            "typecheck": { "type": "string" }
+          }
+        },
+        "cdk": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workingDirectory": { "type": "string", "default": "infra" },
+            "synthCommand":     { "type": "string", "default": "pnpm cdk synth" },
+            "diffCommand":      { "type": "string", "default": "pnpm cdk diff" },
+            "deployCommand":    { "type": "string", "default": "pnpm cdk deploy --require-approval never" }
+          }
+        }
+      }
+    },
+    "environments": {
+      "type": "object",
+      "description": "Deployment environment definitions. At least one environment required.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["cdkStack", "githubEnvironment"],
+        "additionalProperties": false,
+        "properties": {
+          "awsRegion":          { "type": "string", "default": "us-east-1" },
+          "cdkStack":           { "type": "string", "description": "CDK stack name for this environment." },
+          "githubEnvironment":  { "type": "string", "description": "GitHub Actions environment name." },
+          "awsAccountId":       { "type": "string" },
+          "roleArn":            { "type": "string" }
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "DORA and audit event sink configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "sink": {
+          "type": "string",
+          "enum": ["github-artifact", "cloudwatch", "eventbridge", "s3", "none"],
+          "default": "github-artifact"
+        },
+        "s3Bucket":             { "type": "string" },
+        "cloudwatchLogGroup":   { "type": "string" },
+        "eventBridgeBus":       { "type": "string" },
+        "auditFormat": {
+          "type": "string",
+          "enum": ["ndjson", "json"],
+          "default": "ndjson"
+        }
+      }
+    },
+    "workflowVersion": {
+      "type": "object",
+      "description": "Pins the centralized reusable workflow version called by this service.",
+      "required": ["ref"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "type": "string",
+          "pattern": "^(v\\d+\\.\\d+\\.\\d+|[0-9a-f]{40})$",
+          "description": "Semver tag (e.g. v0.1.0) or full 40-char SHA. Floating refs like 'main' are rejected by governance."
+        }
+      }
+    }
+  }
+}
