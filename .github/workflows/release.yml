@@ -1,0 +1,157 @@
+# ---------------------------------------------------------------------------
+# Release — create a new version tag
+#
+# Triggered manually from the GitHub Actions UI ("Run workflow" button).
+# The caller supplies the new version (e.g. "0.3.0") and the workflow:
+#
+#   1. Runs the full CI suite on main to confirm the branch is green.
+#   2. Bumps the version field in packages/workflow-framework/package.json.
+#   3. Commits the version bump directly to main.
+#   4. Creates and pushes an annotated git tag (v<version>).
+#
+# The tag then becomes the stable ref that service repos pin to:
+#
+#   pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.0
+#
+# Requires the default GITHUB_TOKEN with "Contents: write" permission, which
+# is granted by the permissions block below (no additional secrets needed).
+# ---------------------------------------------------------------------------
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version to release (semver, without the 'v' prefix — e.g. 0.3.0)"
+        required: true
+        type: string
+      dry_run:
+        description: "Dry run — run CI and validate the version but do NOT commit or tag"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # needed to push a commit and create a tag
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Step 1 — Verify the input version looks like semver and is higher than the
+  # current package.json version. Fail fast before running CI if invalid.
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Validate version
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate semver input
+        id: check
+        run: |
+          VERSION="${{ inputs.version }}"
+
+          # Must match X.Y.Z (no 'v' prefix — we add that when tagging)
+          if ! echo "$VERSION" | grep -qP '^\d+\.\d+\.\d+$'; then
+            echo "::error::Version '$VERSION' is not valid semver (expected X.Y.Z without the 'v' prefix)"
+            exit 1
+          fi
+
+          # Must not already exist as a tag
+          if git tag --list "v${VERSION}" | grep -q "v${VERSION}"; then
+            echo "::error::Tag v${VERSION} already exists"
+            exit 1
+          fi
+
+          CURRENT=$(node -p "require('./packages/workflow-framework/package.json').version")
+          echo "Current version in package.json: $CURRENT"
+          echo "Requested release version:       $VERSION"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # Step 2 — Run the full CI suite on main. Refuse to tag a broken branch.
+  # ---------------------------------------------------------------------------
+  ci:
+    name: Typecheck & tests
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install
+        working-directory: packages/workflow-framework
+
+      - name: Typecheck
+        run: pnpm typecheck
+        working-directory: packages/workflow-framework
+
+      - name: Build
+        run: pnpm build
+        working-directory: packages/workflow-framework
+
+      - name: Test
+        run: pnpm test
+        working-directory: packages/workflow-framework
+
+  # ---------------------------------------------------------------------------
+  # Step 3 — Create an annotated tag on the current HEAD of main.
+  # No files are modified. Skipped entirely when dry_run is true.
+  # ---------------------------------------------------------------------------
+  tag:
+    name: Create tag
+    needs: [validate, ci]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run == false }}
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create annotated tag
+        run: |
+          git tag -a "v${{ needs.validate.outputs.version }}" \
+            -m "Release v${{ needs.validate.outputs.version }}"
+
+      - name: Push tag
+        run: git push origin "v${{ needs.validate.outputs.version }}"
+
+      - name: Summary
+        run: |
+          echo "## Release complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Tag:** \`v${{ needs.validate.outputs.version }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Install:**" >> "$GITHUB_STEP_SUMMARY"
+          echo '```bash' >> "$GITHUB_STEP_SUMMARY"
+          echo "pnpm add -D github:evertonjuniti/loanprochallenge#v${{ needs.validate.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
