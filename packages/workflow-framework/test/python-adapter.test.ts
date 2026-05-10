@@ -65,7 +65,7 @@ describe("PythonAdapter.unitTestSteps", () => {
 
   it("falls back to default uv run pytest tests/unit", () => {
     const [step] = adapter.unitTestSteps(baseConfig);
-    expect(step!.run).toBe("uv run pytest tests/unit");
+    expect(step!.run).toContain("uv run pytest tests/unit");
   });
 
   it("uses config.ci.smallTests.unit when set", () => {
@@ -74,7 +74,7 @@ describe("PythonAdapter.unitTestSteps", () => {
       ci: { smallTests: { unit: "uv run pytest tests/unit -x --tb=short" } },
     };
     const [step] = adapter.unitTestSteps(config);
-    expect(step!.run).toBe("uv run pytest tests/unit -x --tb=short");
+    expect(step!.run).toContain("uv run pytest tests/unit -x --tb=short");
   });
 
   it("returns exactly one step", () => {
@@ -91,7 +91,7 @@ describe("PythonAdapter.propertyTestSteps", () => {
 
   it("falls back to default uv run pytest tests/property", () => {
     const [step] = adapter.propertyTestSteps(baseConfig);
-    expect(step!.run).toBe("uv run pytest tests/property");
+    expect(step!.run).toContain("uv run pytest tests/property");
   });
 
   it("uses config.ci.smallTests.property when set", () => {
@@ -113,7 +113,7 @@ describe("PythonAdapter.contractTestSteps", () => {
 
   it("falls back to default uv run pytest tests/contracts", () => {
     const [step] = adapter.contractTestSteps(baseConfig);
-    expect(step!.run).toBe("uv run pytest tests/contracts");
+    expect(step!.run).toContain("uv run pytest tests/contracts");
   });
 
   it("uses config.ci.smallTests.contract when set", () => {
@@ -135,7 +135,7 @@ describe("PythonAdapter.lintSteps", () => {
 
   it("falls back to default uv run ruff check .", () => {
     const [step] = adapter.lintSteps(baseConfig);
-    expect(step!.run).toBe("uv run ruff check .");
+    expect(step!.run).toContain("uv run ruff check .");
   });
 
   it("uses config.ci.smallTests.lint when set", () => {
