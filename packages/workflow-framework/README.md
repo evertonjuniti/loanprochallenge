@@ -10,9 +10,10 @@ Source repository: https://github.com/evertonjuniti/loanprochallenge
 
 | Module | Purpose |
 |---|---|
-| `config/` | Zod schema for `devex.yaml`, config loader, and validator |
+| `config/` | Zod schema for `devex.yaml`, YAML config loader, and validator |
 | `governance/` | Work ID validation, branch/commit/PR-title rules, branch name builder |
 | `telemetry/` | Base event types, audit event schema, DORA event schema and metric aggregation |
+| `adapters/` | `LanguageAdapter` interface, `PythonAdapter`, `TypescriptAdapter`, adapter registry |
 
 Everything is exported from the single entry point `src/index.ts`.
 
@@ -147,10 +148,13 @@ const result = validateWorkflowRef("main"); // rejected
 // result.errors[0].message → 'Ref "main" is not a pinned semver tag ...'
 ```
 
-### Emit and serialise a deployment audit event
+### Emit a deployment audit event and write it to a GitHub Actions artifact
 
 ```typescript
-import { createDeploymentAuditEvent, toNdjson } from "@loanpro/devex-workflow-framework";
+import {
+  createDeploymentAuditEvent,
+  appendEventsToFile,
+} from "@loanpro/devex-workflow-framework";
 
 const event = createDeploymentAuditEvent({
   eventType: "deployment_succeeded",
@@ -167,9 +171,35 @@ const event = createDeploymentAuditEvent({
   why: "https://github.com/evertonjuniti/transactionify/pull/42",
 });
 
-// Write to GitHub Actions artifact
-import { appendFileSync } from "node:fs";
-appendFileSync("dora-events.ndjson", toNdjson([event]));
+// Appends to dora-events.ndjson — safe to call multiple times across steps
+appendEventsToFile([event]);
+```
+
+Then upload the file as a GitHub Actions artifact:
+
+```yaml
+- uses: actions/upload-artifact@v4
+  with:
+    name: dora-events
+    path: dora-events.ndjson
+```
+
+### Resolve a language adapter and generate workflow steps
+
+```typescript
+import { resolveAdapter } from "@loanpro/devex-workflow-framework";
+import { parse } from "yaml";
+import { readFileSync } from "node:fs";
+
+const config = assertValidConfig(parse(readFileSync("devex.yaml", "utf-8")));
+const adapter = resolveAdapter(config); // PythonAdapter, TypescriptAdapter, etc.
+
+const steps = [
+  ...adapter.setupSteps(config),
+  ...adapter.unitTestSteps(config),
+  ...adapter.lintSteps(config),
+];
+// steps is WorkflowStep[] — ready to be serialised into a GitHub Actions workflow
 ```
 
 ### Compute DORA metrics from a set of events
@@ -208,12 +238,26 @@ This package follows [Semantic Versioning](https://semver.org):
 | New feature, backward compatible | `0.1.0 → 0.2.0` (minor) |
 | Breaking API or schema change | `0.1.0 → 1.0.0` (major) |
 
-To cut a release:
+To cut a release (see [contribution guidelines](../../docs/contribution-guidelines.md#release-process-platform-team) for the full process):
 
 ```bash
 cd packages/workflow-framework
-npm version minor          # bumps package.json and creates a git tag
-git push origin v0.2.0     # tag is the release artifact for Git dependencies
+
+# 1. Create a release branch
+git checkout -b chore/DEVEX-<n>-release-v<new-version>
+
+# 2. Bump version only (no commit, no tag)
+npm version minor --no-git-tag-version
+
+# 3. Commit and open a PR
+git add package.json
+git commit -m "[DEVEX-<n>] Release v<new-version>"
+git push origin chore/DEVEX-<n>-release-v<new-version>
+
+# 4. After PR merges, tag the merge commit
+git checkout main && git pull
+git tag v<new-version>
+git push origin v<new-version>
 ```
 
 Service repos update by changing their pinned ref:

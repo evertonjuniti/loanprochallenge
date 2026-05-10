@@ -1,12 +1,16 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parse as parseYaml } from "yaml";
 import { DevexConfigSchema, type DevexConfig } from "./devex-config.schema.js";
 
 /**
- * Loads and parses a devex.yaml file from the given path.
- * Throws a ZodError with detailed field-level messages if the file is invalid.
+ * Loads and validates a `devex.yaml` file from the given path.
  *
- * @param configPath - Absolute or relative path to devex.yaml
+ * The file content is parsed as YAML and then validated against the Zod schema.
+ * Throws a `ZodError` with detailed field-level messages if validation fails,
+ * or an `Error` if the file cannot be read or parsed.
+ *
+ * @param configPath - Absolute or relative path to devex.yaml (default: "devex.yaml")
  * @returns Validated DevexConfig object with all defaults applied
  */
 export function loadConfig(configPath: string = "devex.yaml"): DevexConfig {
@@ -15,14 +19,7 @@ export function loadConfig(configPath: string = "devex.yaml"): DevexConfig {
 
   try {
     const content = readFileSync(absolutePath, "utf-8");
-    // NOTE: The workflow framework intentionally keeps zero YAML parsing
-    // dependencies at this layer. Real YAML parsing (with full spec compliance)
-    // is handled by the CLI layer (Python: pyyaml / Node: js-yaml).
-    // For unit tests and programmatic use, callers should parse YAML themselves
-    // and pass the resulting plain object to `assertValidConfig` instead.
-    // This function accepts a pre-parsed JSON file or plain JS object serialised
-    // as JSON for testing purposes.
-    raw = JSON.parse(content);
+    raw = parseYaml(content);
   } catch (readErr) {
     throw new Error(
       `Could not read devex config at "${absolutePath}": ${(readErr as Error).message}`
@@ -33,7 +30,8 @@ export function loadConfig(configPath: string = "devex.yaml"): DevexConfig {
 }
 
 /**
- * Like loadConfig but returns a discriminated result instead of throwing.
+ * Like `loadConfig` but returns a discriminated result instead of throwing.
+ * Useful in scripts that want to report errors without try/catch.
  */
 export function tryLoadConfig(
   configPath: string = "devex.yaml"
