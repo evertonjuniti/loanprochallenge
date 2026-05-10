@@ -31,6 +31,22 @@ function firstDefined(...candidates: (string | undefined)[]): string {
   throw new Error("No command defined and no default available.");
 }
 
+/**
+ * Wraps a shell command with a guard that checks for `pyproject.toml`.
+ * If the file is absent the step emits a GitHub Actions warning and skips,
+ * rather than failing the workflow. This allows the Golden Path to be used
+ * in repos that don't yet have a Python project bootstrapped.
+ */
+function withPyprojectGuard(cmd: string): string {
+  return [
+    `if [ ! -f pyproject.toml ]; then`,
+    `  echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."`,
+    `  exit 0`,
+    `fi`,
+    cmd,
+  ].join("\n");
+}
+
 // ---------------------------------------------------------------------------
 // PythonAdapter
 // ---------------------------------------------------------------------------
@@ -79,9 +95,11 @@ export class PythonAdapter implements LanguageAdapter {
       },
       {
         name: "Install dependencies",
-        run: firstDefined(config.local?.testCommand, DEFAULTS.setup).startsWith("uv")
-          ? DEFAULTS.setup
-          : DEFAULTS.setup,
+        run: withPyprojectGuard(
+          firstDefined(config.local?.testCommand, DEFAULTS.setup).startsWith("uv")
+            ? DEFAULTS.setup
+            : DEFAULTS.setup
+        ),
       },
     ];
   }
@@ -95,7 +113,7 @@ export class PythonAdapter implements LanguageAdapter {
     return [
       {
         name: "Run unit tests",
-        run: cmd,
+        run: withPyprojectGuard(cmd),
       },
     ];
   }
@@ -109,7 +127,7 @@ export class PythonAdapter implements LanguageAdapter {
     return [
       {
         name: "Run property-based tests",
-        run: cmd,
+        run: withPyprojectGuard(cmd),
       },
     ];
   }
@@ -123,7 +141,7 @@ export class PythonAdapter implements LanguageAdapter {
     return [
       {
         name: "Run contract tests",
-        run: cmd,
+        run: withPyprojectGuard(cmd),
       },
     ];
   }
@@ -137,7 +155,7 @@ export class PythonAdapter implements LanguageAdapter {
     return [
       {
         name: "Lint (ruff)",
-        run: cmd,
+        run: withPyprojectGuard(cmd),
       },
     ];
   }
