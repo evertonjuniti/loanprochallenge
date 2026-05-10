@@ -175,22 +175,26 @@ Non-breaking additions (new optional fields, new adapters, new exports) use a mi
 After a feature PR is merged to `main`:
 
 ```bash
-cd packages/workflow-framework
-
 # 1. Create a release branch (main is protected — no direct pushes)
 git checkout main && git pull
 git checkout -b chore/DEVEX-<n>-release-v<new-version>
 
-# 2. Bump version in package.json and create a local commit + tag
+# 2. Bump version in package.json only — no commit, no tag yet
 #    Replace "minor" with "patch" or "major" as appropriate
-npm version minor
+cd packages/workflow-framework
+npm version minor --no-git-tag-version
 
-# 3. Push the branch (not main) and open a PR
+# 3. Commit the version bump manually
+cd ../..
+git add packages/workflow-framework/package.json
+git commit -m "[DEVEX-<n>] Release v<new-version>"
 git push origin chore/DEVEX-<n>-release-v<new-version>
 # → open a PR titled "[DEVEX-<n>] Release v<new-version>"
 
-# 4. After the PR is approved and merged, push only the tag
-#    Tags are not subject to branch protection rules
+# 4. After the PR is approved and merged, pull main and tag that commit
+#    --no-git-tag-version means no tag was created in step 2, so this is the only tag
+git checkout main && git pull
+git tag v<new-version>
 git push origin v<new-version>
 ```
 
