@@ -125,6 +125,7 @@ export function createPrWorkflow(
   return {
     name: `DevEx PR Pipeline — ${config.service.name}`,
     on: {
+      workflow_dispatch: {},
       pull_request: {
         types: [
           "opened",

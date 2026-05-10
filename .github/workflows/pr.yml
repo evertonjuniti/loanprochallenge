@@ -6,6 +6,7 @@
 
 name: DevEx PR Pipeline — transactionify
 on:
+  workflow_dispatch: {}
   pull_request:
     types:
       - opened
