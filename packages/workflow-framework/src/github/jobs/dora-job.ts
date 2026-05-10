@@ -57,6 +57,8 @@ export function buildDoraAuditJob(
       env: {
         // Used to extract the Work ID for the summary heading.
         GITHUB_HEAD_REF: "${{ github.head_ref || '' }}",
+        // Used to identify the service in the report (owner/repo-name).
+        GITHUB_REPOSITORY: "${{ github.repository }}",
       },
       run: doraComputeScript(),
     },
@@ -103,6 +105,9 @@ function doraComputeScript(): string {
     `const branch = process.env.GITHUB_HEAD_REF ?? "";`,
     `const workIdMatch = branch.match(/[A-Z]+-[0-9]+/);`,
     `const workId = workIdMatch ? workIdMatch[0] : null;`,
+    `const fullRepo = process.env.GITHUB_REPOSITORY ?? "";`,
+    `const serviceName = fullRepo.includes("/") ? fullRepo.split("/")[1] : fullRepo;`,
+    `const serviceDisplay = serviceName || fullRepo || "N/A";`,
     `const prodDeps = events.filter(e => e.environment === "production" && (e.doraEventType === "deployment_succeeded" || e.doraEventType === "deployment_failed" || e.doraEventType === "deployment_rolled_back"));`,
     `const deploymentCount = prodDeps.filter(e => e.doraEventType === "deployment_succeeded").length;`,
     `const failedDeploymentCount = prodDeps.filter(e => e.doraEventType === "deployment_failed" || e.doraEventType === "deployment_rolled_back").length;`,
@@ -115,6 +120,7 @@ function doraComputeScript(): string {
     `const markdown = [`,
     `  "## DORA Metrics Summary", "",`,
     `  "| Metric | Value |", "|---|---|",`,
+    `  "| Service | " + serviceDisplay + " |",`,
     `  "| Work ID | " + (workId ?? "N/A") + " |",`,
     `  "| Environment | pr |",`,
     `  "| Successful Deployments | " + deploymentCount + " |",`,
