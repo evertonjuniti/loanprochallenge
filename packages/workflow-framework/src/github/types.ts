@@ -73,5 +73,6 @@ export function toGithubStep(step: WorkflowStep): GithubStep {
   if (step.env !== undefined) s.env = step.env;
   if (step.continueOnError !== undefined) s["continue-on-error"] = step.continueOnError;
   if (step.condition !== undefined) s.if = step.condition;
+  if (step.workingDirectory !== undefined) s["working-directory"] = step.workingDirectory;
   return s;
 }

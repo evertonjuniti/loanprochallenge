@@ -162,7 +162,7 @@ service:
   owner: my-team
 
 runtime:
-  appLanguage: python            # python | go | typescript | clojure | java | rust
+  appLanguage: python            # single language, or array for polyglot: [typescript, python]
   infraLanguage: typescript
   infraFramework: aws-cdk-typescript
 

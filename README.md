@@ -126,7 +126,7 @@ service:
   owner: payments-platform
 
 runtime:
-  appLanguage: python              # python | go | typescript | clojure | java | rust
+  appLanguage: python              # single language, or array for polyglot: [typescript, python]
   infraLanguage: typescript
   infraFramework: aws-cdk-typescript
 
@@ -210,7 +210,7 @@ pip install -e ".[dev]"
 ```bash
 # TypeScript — workflow-framework
 cd packages/workflow-framework
-pnpm test          # 70 tests
+pnpm test          # 227 tests
 pnpm typecheck
 
 # Python — CLI

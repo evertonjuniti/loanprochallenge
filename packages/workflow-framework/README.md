@@ -80,7 +80,10 @@ service:
   owner: my-team
 
 runtime:
+  # Single-language service:
   appLanguage: python
+  # Polyglot monorepo (e.g. TypeScript library + Python CLI):
+  # appLanguage: [typescript, python]
 
 environments:
   production:
@@ -188,20 +191,35 @@ Then upload the file as a GitHub Actions artifact:
 
 ### Resolve a language adapter and generate workflow steps
 
+For single-language repos, use `resolveAdapter`. For polyglot repos (where
+`appLanguage` is an array), use `resolveAdapters` to get one adapter per language:
+
 ```typescript
-import { resolveAdapter } from "@loanpro/devex-workflow-framework";
+import {
+  resolveAdapter,
+  resolveAdapters,
+} from "@loanpro/devex-workflow-framework";
 import { parse } from "yaml";
 import { readFileSync } from "node:fs";
 
 const config = assertValidConfig(parse(readFileSync("devex.yaml", "utf-8")));
-const adapter = resolveAdapter(config); // PythonAdapter, TypescriptAdapter, etc.
 
+// Single-language — returns the one adapter:
+const adapter = resolveAdapter(config); // PythonAdapter, TypescriptAdapter, etc.
 const steps = [
   ...adapter.setupSteps(config),
   ...adapter.unitTestSteps(config),
   ...adapter.lintSteps(config),
 ];
-// steps is WorkflowStep[] — ready to be serialised into a GitHub Actions workflow
+
+// Polyglot — returns one adapter per language in declaration order:
+const adapters = resolveAdapters(config);
+const allSteps = adapters.flatMap((a) => [
+  ...a.setupSteps(config),
+  ...a.unitTestSteps(config),
+  ...a.lintSteps(config),
+]);
+// allSteps is WorkflowStep[] — ready to be serialised into a GitHub Actions workflow
 ```
 
 ### Compute DORA metrics from a set of events

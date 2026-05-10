@@ -125,6 +125,14 @@ jobs:
         run: corepack enable
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+      - name: Run unit tests
+        run: pnpm vitest run
+      - name: Run property-based tests
+        run: echo 'No property tests in this package'
+      - name: Run contract tests
+        run: echo 'No contract tests in this package'
+      - name: Lint (eslint)
+        run: pnpm run lint
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -134,6 +142,7 @@ jobs:
         with:
           enable-cache: false
       - name: Install dependencies
+        working-directory: packages/cli
         run: |-
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
@@ -141,27 +150,31 @@ jobs:
           fi
           uv sync --frozen
       - name: Run unit tests
+        working-directory: packages/cli
         run: |-
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
-          uv run pytest tests/unit
+          uv run pytest
       - name: Run property-based tests
+        working-directory: packages/cli
         run: |-
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
-          uv run pytest tests/property
+          echo 'No property tests in this package'
       - name: Run contract tests
+        working-directory: packages/cli
         run: |-
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
-          uv run pytest tests/contracts
+          echo 'No contract tests in this package'
       - name: Lint (ruff)
+        working-directory: packages/cli
         run: |-
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."

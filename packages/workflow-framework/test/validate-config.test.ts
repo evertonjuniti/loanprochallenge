@@ -55,6 +55,44 @@ describe("DevexConfigSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts appLanguage as an array (polyglot repo)", () => {
+    const result = DevexConfigSchema.safeParse({
+      ...minimal,
+      runtime: { appLanguage: ["typescript", "python"] },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown language inside an appLanguage array", () => {
+    const result = DevexConfigSchema.safeParse({
+      ...minimal,
+      runtime: { appLanguage: ["typescript", "cobol"] },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an empty appLanguage array", () => {
+    const result = DevexConfigSchema.safeParse({
+      ...minimal,
+      runtime: { appLanguage: [] },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts per-language smallTests overrides in ci config", () => {
+    const result = DevexConfigSchema.safeParse({
+      ...minimal,
+      runtime: { appLanguage: ["typescript", "python"] },
+      ci: {
+        smallTests: {
+          typescript: { unit: "pnpm vitest run", lint: "pnpm run lint" },
+          python: { workingDirectory: "packages/cli", unit: "uv run pytest" },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a full realistic config", () => {
     const full = {
       schemaVersion: 1 as const,

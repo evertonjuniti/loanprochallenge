@@ -88,7 +88,7 @@ export class TypescriptAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.unit`, falls back to `pnpm test`.
    */
   unitTestSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.unit, DEFAULTS.unit);
+    const cmd = firstDefined(config.ci?.smallTests?.typescript?.unit, config.ci?.smallTests?.unit, DEFAULTS.unit);
     return [
       {
         name: "Run unit tests",
@@ -102,7 +102,7 @@ export class TypescriptAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.property`, falls back to `pnpm run test:property`.
    */
   propertyTestSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.property, DEFAULTS.property);
+    const cmd = firstDefined(config.ci?.smallTests?.typescript?.property, config.ci?.smallTests?.property, DEFAULTS.property);
     return [
       {
         name: "Run property-based tests",
@@ -116,7 +116,7 @@ export class TypescriptAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.contract`, falls back to `pnpm run test:contract`.
    */
   contractTestSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.contract, DEFAULTS.contract);
+    const cmd = firstDefined(config.ci?.smallTests?.typescript?.contract, config.ci?.smallTests?.contract, DEFAULTS.contract);
     return [
       {
         name: "Run contract tests",
@@ -130,7 +130,7 @@ export class TypescriptAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.lint`, falls back to `pnpm run lint`.
    */
   lintSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.lint, DEFAULTS.lint);
+    const cmd = firstDefined(config.ci?.smallTests?.typescript?.lint, config.ci?.smallTests?.lint, DEFAULTS.lint);
     return [
       {
         name: "Lint (eslint)",

@@ -1,15 +1,15 @@
 # yaml-language-server: $schema=./devex.schema.json
-# devex.yaml — Transactionify service configuration
-# This file is the integration contract between the service repository,
-# the devex CLI (Component A), and the workflow framework (Component B).
+# devex.yaml — loanprochallenge monorepo configuration
+# This file describes the monorepo itself to the devex CI tooling.
+# It is used by scripts/generate-workflows.mjs to regenerate .github/workflows/.
 # Validate locally with: devex check
 
 schemaVersion: 1
 
 service:
-  name: transactionify
-  owner: payments-platform
-  type: microservice
+  name: devex-workflow-framework
+  owner: platform-team
+  type: platform-tool
 
 workTracking:
   workIdPattern: "^[A-Z]+-[0-9]+$"
@@ -18,41 +18,35 @@ workTracking:
   prTitlePattern: "^\\[[A-Z]+-[0-9]+\\] .+"
 
 runtime:
-  appLanguage: python
+  appLanguage: [typescript, python]
   infraLanguage: typescript
-  infraFramework: aws-cdk-typescript
+  infraFramework: none
 
 local:
   testCommand: "uv run pytest"
   lintCommand: "uv run ruff check ."
-  contractTestCommand: "uv run pytest tests/contracts"
-  propertyTestCommand: "uv run pytest tests/property"
 
 ci:
   smallTests:
-    unit: "uv run pytest tests/unit"
-    property: "uv run pytest tests/property"
-    contract: "uv run pytest tests/contracts"
-    lint: "uv run ruff check ."
-  cdk:
-    workingDirectory: "infra"
-    synthCommand: "pnpm cdk synth"
-    diffCommand: "pnpm cdk diff"
-    deployCommand: "pnpm cdk deploy --require-approval never"
+    # Per-adapter overrides for this polyglot monorepo.
+    typescript:
+      unit: "pnpm vitest run"
+      property: "echo 'No property tests in this package'"
+      contract: "echo 'No contract tests in this package'"
+      lint: "pnpm run lint"
+    python:
+      # The Python CLI package lives at packages/cli.
+      workingDirectory: packages/cli
+      unit: "uv run pytest"
+      property: "echo 'No property tests in this package'"
+      contract: "echo 'No contract tests in this package'"
+      lint: "uv run ruff check ."
 
 environments:
   sandbox:
     awsRegion: us-east-1
-    cdkStack: TransactionifySandbox
+    cdkStack: DevexWorkflowFrameworkSandbox
     githubEnvironment: sandbox
-  staging:
-    awsRegion: us-east-1
-    cdkStack: TransactionifyStaging
-    githubEnvironment: staging
-  production:
-    awsRegion: us-east-1
-    cdkStack: TransactionifyProduction
-    githubEnvironment: production
 
 telemetry:
   sink: github-artifact

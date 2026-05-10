@@ -1,5 +1,5 @@
 import type { DevexConfig } from "../../config/devex-config.schema.js";
-import { resolveAdapter } from "../../adapters/index.js";
+import { resolveAdapters } from "../../adapters/index.js";
 import { checkoutStep, nodeBootstrapSteps } from "../steps.js";
 import { toGithubStep } from "../types.js";
 import type { GithubJob, GithubStep } from "../types.js";
@@ -11,10 +11,10 @@ import type { GithubJob, GithubStep } from "../types.js";
 // without deploying to any environment. Depends on the governance job
 // passing, so test results are only produced for convention-compliant code.
 //
-// The language adapter (resolved from config.runtime.appLanguage) provides
-// the setup and test steps. This keeps the workflow generator polyglot:
-// the same createPrWorkflow() function produces correct steps for Python,
-// TypeScript, Go, etc. without any conditional branching here.
+// The language adapter(s) (resolved from config.runtime.appLanguage) provide
+// the setup and test steps. When appLanguage is an array, steps from all
+// adapters are concatenated — supporting polyglot monorepos without any
+// conditional branching in the workflow generators.
 // ---------------------------------------------------------------------------
 
 export interface SmallTestsJobOptions {
@@ -27,34 +27,38 @@ export interface SmallTestsJobOptions {
 /**
  * Builds the small-tests job definition for a PR workflow.
  *
- * Uses `resolveAdapter(config)` to select language-specific steps.
- * Throws if no adapter is registered for `config.runtime.appLanguage`.
+ * Uses `resolveAdapters(config)` to select language-specific steps.
+ * When `appLanguage` is an array (polyglot repo), each adapter's steps are
+ * appended in declaration order.
+ * Throws if any language has no registered adapter.
  */
 export function buildSmallTestsJob(
   config: DevexConfig,
   options: SmallTestsJobOptions = {}
 ): GithubJob {
   const runsOn = options.runsOn ?? "ubuntu-latest";
-  const adapter = resolveAdapter(config);
+  const adapters = resolveAdapters(config);
 
-  // Convert adapter WorkflowStep[] → GithubStep[] for YAML serialisation.
-  const adapterSteps: GithubStep[] = [
+  // Merge steps from every adapter in declaration order.
+  const adapterSteps: GithubStep[] = adapters.flatMap((adapter) => [
     ...adapter.setupSteps(config),
     ...adapter.unitTestSteps(config),
     ...adapter.propertyTestSteps(config),
     ...adapter.contractTestSteps(config),
     ...adapter.lintSteps(config),
-  ].map(toGithubStep);
+  ]).map(toGithubStep);
+
+  // The TypeScript adapter's setupSteps already include setup-node + corepack
+  // + pnpm install, so we only prepend the shared Node bootstrap when no
+  // TypeScript adapter is present (e.g. pure Python or Go repos).
+  const hasTypescriptAdapter = adapters.some((a) => a.name === "typescript");
 
   const job: GithubJob = {
     name: "Small Tests",
     "runs-on": runsOn,
     steps: [
       checkoutStep(),
-      // For TypeScript services the adapter's setupSteps already include
-      // setup-node + corepack + pnpm install, so we only prepend those for
-      // languages whose adapters don't handle Node bootstrap (e.g. Python).
-      ...(adapter.name === "python" ? nodeBootstrapSteps() : []),
+      ...(hasTypescriptAdapter ? [] : nodeBootstrapSteps()),
       ...adapterSteps,
     ],
   };
