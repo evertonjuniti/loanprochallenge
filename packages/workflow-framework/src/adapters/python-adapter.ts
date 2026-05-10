@@ -74,7 +74,7 @@ export class PythonAdapter implements LanguageAdapter {
         name: "Install uv",
         uses: "astral-sh/setup-uv@v4",
         with: {
-          "enable-cache": true,
+          "enable-cache": false,
         },
       },
       {
