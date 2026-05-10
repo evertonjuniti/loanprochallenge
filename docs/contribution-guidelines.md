@@ -172,16 +172,26 @@ Non-breaking additions (new optional fields, new adapters, new exports) use a mi
 
 ## Release process (platform team)
 
-After a PR is merged to `main`:
+After a feature PR is merged to `main`:
 
 ```bash
 cd packages/workflow-framework
 
-# Bump version (patch / minor / major)
+# 1. Create a release branch (main is protected — no direct pushes)
+git checkout main && git pull
+git checkout -b chore/DEVEX-<n>-release-v<new-version>
+
+# 2. Bump version in package.json and create a local commit + tag
+#    Replace "minor" with "patch" or "major" as appropriate
 npm version minor
 
-# Push the tag — this is the release artifact
-git push origin main --tags
+# 3. Push the branch (not main) and open a PR
+git push origin chore/DEVEX-<n>-release-v<new-version>
+# → open a PR titled "[DEVEX-<n>] Release v<new-version>"
+
+# 4. After the PR is approved and merged, push only the tag
+#    Tags are not subject to branch protection rules
+git push origin v<new-version>
 ```
 
 Service repos then update their pinned ref:
