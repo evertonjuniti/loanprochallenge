@@ -43,11 +43,12 @@ export function enableCorepackStep(): GithubStep {
   };
 }
 
-/** Installs Node.js dependencies from the lockfile (reproducible builds). */
+/** Installs Node.js dependencies. Uses --no-frozen-lockfile because this
+ * repository does not commit a pnpm-lock.yaml. */
 export function installNodeDepsStep(workingDirectory?: string): GithubStep {
   const step: GithubStep = {
     name: "Install dependencies",
-    run: "pnpm install --frozen-lockfile",
+    run: "pnpm install --no-frozen-lockfile",
   };
   if (workingDirectory !== undefined) {
     step["working-directory"] = workingDirectory;

@@ -6,8 +6,9 @@ import type { LanguageAdapter, WorkflowStep } from "./language-adapter.js";
 // ---------------------------------------------------------------------------
 
 const DEFAULTS = {
-  /** pnpm is the recommended package manager for TypeScript services in LoanPro. */
-  setup: "pnpm install --frozen-lockfile",
+  /** pnpm is the recommended package manager for TypeScript services in LoanPro.
+   * --no-frozen-lockfile is required when no pnpm-lock.yaml is committed. */
+  setup: "pnpm install --no-frozen-lockfile",
   unit: "pnpm test",
   property: "pnpm run test:property",
   contract: "pnpm run test:contract",

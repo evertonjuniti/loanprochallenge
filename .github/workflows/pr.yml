@@ -34,7 +34,7 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - id: validate-branch
         name: Validate branch name
         env:
@@ -138,7 +138,7 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -172,7 +172,7 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
         working-directory: infra
       - name: CDK synth
         run: pnpm cdk synth
@@ -196,7 +196,7 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
         working-directory: infra
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -270,7 +270,7 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
         working-directory: infra
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -344,7 +344,7 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
         working-directory: infra
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -415,7 +415,7 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Download audit event artifacts
         uses: actions/download-artifact@v4
         with:
