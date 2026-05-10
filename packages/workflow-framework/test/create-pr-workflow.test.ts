@@ -101,7 +101,7 @@ describe("createPrWorkflow", () => {
   it("returns a GithubWorkflow object with the required top-level fields", () => {
     const wf = createPrWorkflow(TRANSACTIONIFY);
 
-    expect(wf.name).toBe("PR Pipeline");
+    expect(wf.name).toBe("DevEx PR Pipeline — transactionify");
     expect(wf.on).toHaveProperty("pull_request");
     expect(wf.permissions).toMatchObject({
       contents: "read",
