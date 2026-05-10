@@ -10,9 +10,12 @@ Source repository: https://github.com/evertonjuniti/loanprochallenge
 
 | Module | Purpose |
 |---|---|
-| `config/` | Zod schema for `devex.yaml`, config loader, and validator |
+| `config/` | Zod schema for `devex.yaml`, YAML config loader, and validator |
 | `governance/` | Work ID validation, branch/commit/PR-title rules, branch name builder |
 | `telemetry/` | Base event types, audit event schema, DORA event schema and metric aggregation |
+| `adapters/` | `LanguageAdapter` interface, `PythonAdapter`, `TypescriptAdapter`, adapter registry |
+| `github/` | Typed GitHub Actions workflow generator: job builders + `createPrWorkflow()` |
+| `cdk/` | CDK constructs: `GoldenLambdaApi` (Lambda + API GW + alarms + tags), `applyGoldenPathTags()` |
 
 Everything is exported from the single entry point `src/index.ts`.
 
@@ -147,10 +150,13 @@ const result = validateWorkflowRef("main"); // rejected
 // result.errors[0].message → 'Ref "main" is not a pinned semver tag ...'
 ```
 
-### Emit and serialise a deployment audit event
+### Emit a deployment audit event and write it to a GitHub Actions artifact
 
 ```typescript
-import { createDeploymentAuditEvent, toNdjson } from "@loanpro/devex-workflow-framework";
+import {
+  createDeploymentAuditEvent,
+  appendEventsToFile,
+} from "@loanpro/devex-workflow-framework";
 
 const event = createDeploymentAuditEvent({
   eventType: "deployment_succeeded",
@@ -167,9 +173,35 @@ const event = createDeploymentAuditEvent({
   why: "https://github.com/evertonjuniti/transactionify/pull/42",
 });
 
-// Write to GitHub Actions artifact
-import { appendFileSync } from "node:fs";
-appendFileSync("dora-events.ndjson", toNdjson([event]));
+// Appends to dora-events.ndjson — safe to call multiple times across steps
+appendEventsToFile([event]);
+```
+
+Then upload the file as a GitHub Actions artifact:
+
+```yaml
+- uses: actions/upload-artifact@v4
+  with:
+    name: dora-events
+    path: dora-events.ndjson
+```
+
+### Resolve a language adapter and generate workflow steps
+
+```typescript
+import { resolveAdapter } from "@loanpro/devex-workflow-framework";
+import { parse } from "yaml";
+import { readFileSync } from "node:fs";
+
+const config = assertValidConfig(parse(readFileSync("devex.yaml", "utf-8")));
+const adapter = resolveAdapter(config); // PythonAdapter, TypescriptAdapter, etc.
+
+const steps = [
+  ...adapter.setupSteps(config),
+  ...adapter.unitTestSteps(config),
+  ...adapter.lintSteps(config),
+];
+// steps is WorkflowStep[] — ready to be serialised into a GitHub Actions workflow
 ```
 
 ### Compute DORA metrics from a set of events
@@ -180,6 +212,128 @@ import { computeDoraMetrics, renderDoraSummaryMarkdown } from "@loanpro/devex-wo
 const summary = computeDoraMetrics(events);
 console.log(renderDoraSummaryMarkdown(summary, "FIN-123", "production"));
 ```
+
+### Generate a typed PR pipeline workflow for a service
+
+`createPrWorkflow(config)` accepts a validated `DevexConfig` and returns a
+complete `GithubWorkflow` object. `renderWorkflowYaml(workflow)` serialises
+it to a GitHub Actions YAML string.
+
+```typescript
+import { loadConfig, createPrWorkflow, renderWorkflowYaml } from "@loanpro/devex-workflow-framework";
+import { writeFileSync, mkdirSync } from "node:fs";
+
+const config = await loadConfig("devex.yaml");  // validates against Zod schema
+const workflow = createPrWorkflow(config);
+const yaml = renderWorkflowYaml(workflow);
+
+mkdirSync(".github/workflows", { recursive: true });
+writeFileSync(".github/workflows/pr.yml", yaml);
+```
+
+The generated workflow contains these jobs, wired in dependency order:
+
+| Job | Depends on | Purpose |
+|---|---|---|
+| `governance` | — | Branch name, PR title, commit messages, workflow ref |
+| `small-tests` | governance | Unit, property, contract tests + lint (via language adapter) |
+| `cdk-synth` | small-tests | CDK `cdk synth` (omitted when `infraFramework ≠ aws-cdk-typescript`) |
+| `deploy-<env>` | previous env | Sequential CDK deploy + OIDC credentials per environment |
+| `dora-audit` | last deploy job | Compute DORA metrics, write step summary, upload artifact |
+
+Regenerate `.github/workflows/pr.yml` from this repo:
+
+```bash
+node scripts/generate-workflows.mjs
+```
+
+### Deploy a service with GoldenLambdaApi (CDK construct)
+
+`GoldenLambdaApi` provisions the full Transactionify-style AWS stack — Python
+Lambda, API Gateway REST API, CloudWatch log group, error-rate alarm, and p99
+duration alarm — with standard Golden Path tags applied to every resource.
+
+#### Install peer dependencies first
+
+`aws-cdk-lib` and `constructs` are **optional** peer dependencies. Install them
+only in CDK app repos (not in service repos that only need the workflow generator):
+
+```bash
+# npm
+npm install --save-dev aws-cdk-lib constructs
+
+# pnpm
+pnpm add -D aws-cdk-lib constructs
+```
+
+#### Example CDK stack
+
+```typescript
+import * as path from "node:path";
+import { Stack, StackProps, App } from "aws-cdk-lib";
+import { Construct } from "constructs";
+import { GoldenLambdaApi } from "@loanpro/devex-workflow-framework";
+
+export class TransactionifySandboxStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+
+    const api = new GoldenLambdaApi(this, "TransactionifyApi", {
+      // Matches devex.yaml service.name
+      serviceName: "transactionify",
+
+      // Path to the Python handler source directory (bundled by CDK)
+      handlerPath: path.join(__dirname, "../src"),
+
+      // Must match one of the devex.yaml environments keys
+      environmentName: "sandbox",
+
+      // Optional: adds a devex:work-prefix tag to every resource
+      workTrackingTag: "FIN",
+
+      // Additional Lambda environment variables (TABLE_NAME, etc.)
+      environment: {
+        TABLE_NAME: "my-table",
+      },
+
+      // Tune defaults if needed:
+      // memorySize: 512,
+      // reservedConcurrency: 50,
+      // errorRateThresholdPercent: 5,
+      // p99DurationThresholdMs: 1000,
+    });
+
+    // Exposed CDK resources for further customisation:
+    // api.lambdaFunction  — lambda.Function
+    // api.restApi         — apigw.RestApi
+    // api.logGroup        — logs.LogGroup
+    // api.errorRateAlarm  — cloudwatch.Alarm
+    // api.p99DurationAlarm — cloudwatch.Alarm
+  }
+}
+
+const app = new App();
+new TransactionifySandboxStack(app, "TransactionifySandbox");
+```
+
+#### Resources created
+
+| AWS Resource | ID pattern |
+|---|---|
+| `AWS::Lambda::Function` | `<serviceName>-<environmentName>` |
+| `AWS::ApiGateway::RestApi` | `<serviceName>-<environmentName>` |
+| `AWS::Logs::LogGroup` | `/aws/lambda/<serviceName>-<environmentName>` |
+| `AWS::CloudWatch::Alarm` | `<serviceName>-<environmentName>-error-rate` |
+| `AWS::CloudWatch::Alarm` | `<serviceName>-<environmentName>-p99-duration` |
+
+#### Standard tags applied to all resources
+
+| Tag | Value |
+|---|---|
+| `devex:service` | `serviceName` from props |
+| `devex:environment` | `environmentName` from props |
+| `devex:managed-by` | `devex-workflow-framework` (always) |
+| `devex:work-prefix` | `workTrackingTag` from props (omitted when not provided) |
 
 ---
 
@@ -208,12 +362,26 @@ This package follows [Semantic Versioning](https://semver.org):
 | New feature, backward compatible | `0.1.0 → 0.2.0` (minor) |
 | Breaking API or schema change | `0.1.0 → 1.0.0` (major) |
 
-To cut a release:
+To cut a release (see [contribution guidelines](../../docs/contribution-guidelines.md#release-process-platform-team) for the full process):
 
 ```bash
 cd packages/workflow-framework
-npm version minor          # bumps package.json and creates a git tag
-git push origin v0.2.0     # tag is the release artifact for Git dependencies
+
+# 1. Create a release branch
+git checkout -b chore/DEVEX-<n>-release-v<new-version>
+
+# 2. Bump version only (no commit, no tag)
+npm version minor --no-git-tag-version
+
+# 3. Commit and open a PR
+git add package.json
+git commit -m "[DEVEX-<n>] Release v<new-version>"
+git push origin chore/DEVEX-<n>-release-v<new-version>
+
+# 4. After PR merges, tag the merge commit
+git checkout main && git pull
+git tag v<new-version>
+git push origin v<new-version>
 ```
 
 Service repos update by changing their pinned ref:

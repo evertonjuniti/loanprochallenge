@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Main-branch CI
+#
+# Runs the full typecheck + test suite every time a PR merges to main.
+# This is the post-merge gate that keeps the main branch always green.
+#
+# It does NOT run on PRs (that is handled by ci.yml) and it does NOT
+# run when the release workflow pushes a tag (tags are ignored here to
+# avoid double-running on a tag-only push).
+# ---------------------------------------------------------------------------
+
+name: Main branch CI
+
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - "**"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Typecheck & unit tests (mirrors the test job in ci.yml)
+  # ---------------------------------------------------------------------------
+  test:
+    name: Typecheck & tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install
+        working-directory: packages/workflow-framework
+
+      - name: Typecheck
+        run: pnpm typecheck
+        working-directory: packages/workflow-framework
+
+      - name: Build
+        run: pnpm build
+        working-directory: packages/workflow-framework
+
+      - name: Test
+        run: pnpm test
+        working-directory: packages/workflow-framework
