@@ -123,7 +123,7 @@ export function createPrWorkflow(
   jobs["dora-audit"] = buildDoraAuditJob(config, { runsOn, needs: doraNeeds });
 
   return {
-    name: `DevEx PR Pipeline — ${config.service.name}`,
+    name: `PR Pipeline`,
     on: {
       workflow_dispatch: {},
       pull_request: {
