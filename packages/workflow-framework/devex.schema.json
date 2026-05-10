@@ -20,7 +20,7 @@
         "name": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Lowercase alphanumeric service name (hyphens allowed). E.g. transactionify."
+          "description": "Lowercase alphanumeric service name (hyphens allowed). E.g. workflow-framework."
         },
         "owner": {
           "type": "string",

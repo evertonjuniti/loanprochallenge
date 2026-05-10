@@ -1,2 +1,0 @@
-## DORA Summary
-All green.

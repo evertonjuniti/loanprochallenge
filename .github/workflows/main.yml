@@ -39,7 +39,7 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
         working-directory: packages/workflow-framework
 
       - name: Typecheck

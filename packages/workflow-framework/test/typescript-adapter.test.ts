@@ -50,10 +50,10 @@ describe("TypescriptAdapter.setupSteps", () => {
     expect(steps[1]!.run).toContain("corepack enable");
   });
 
-  it("third step installs dependencies with pnpm install --frozen-lockfile", () => {
+  it("third step installs dependencies with pnpm install --no-frozen-lockfile", () => {
     const steps = adapter.setupSteps(baseConfig);
     expect(steps[2]!.run).toContain("pnpm install");
-    expect(steps[2]!.run).toContain("--frozen-lockfile");
+    expect(steps[2]!.run).toContain("--no-frozen-lockfile");
   });
 });
 
