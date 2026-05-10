@@ -19,6 +19,11 @@
  *   - Job builders (governance, small-tests, cdk-synth, deploy, dora-audit)
  *   - createPrWorkflow(config) — assembles the complete PR pipeline
  *   - renderWorkflowYaml(workflow) — serialises to GitHub Actions YAML
+ *
+ * Phase 4 — CDK constructs:
+ *   - GoldenLambdaApi — Python Lambda + API Gateway + alarms + standard tags
+ *   - applyGoldenPathTags — applies devex:* tags to any CDK construct scope
+ *   Requires aws-cdk-lib ^2.0.0 and constructs ^10.0.0 (peer dependencies).
  */
 
 // Config schema and types
@@ -48,3 +53,7 @@ export * from "./github/jobs/cdk-synth-job.js";
 export * from "./github/jobs/deploy-job.js";
 export * from "./github/jobs/dora-job.js";
 export * from "./github/workflows/create-pr-workflow.js";
+
+// CDK constructs (Phase 4) — requires aws-cdk-lib ^2.0.0 + constructs ^10.0.0
+export * from "./cdk/tagging.js";
+export * from "./cdk/golden-lambda-api.js";

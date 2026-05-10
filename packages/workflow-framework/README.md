@@ -15,6 +15,7 @@ Source repository: https://github.com/evertonjuniti/loanprochallenge
 | `telemetry/` | Base event types, audit event schema, DORA event schema and metric aggregation |
 | `adapters/` | `LanguageAdapter` interface, `PythonAdapter`, `TypescriptAdapter`, adapter registry |
 | `github/` | Typed GitHub Actions workflow generator: job builders + `createPrWorkflow()` |
+| `cdk/` | CDK constructs: `GoldenLambdaApi` (Lambda + API GW + alarms + tags), `applyGoldenPathTags()` |
 
 Everything is exported from the single entry point `src/index.ts`.
 
@@ -245,6 +246,94 @@ Regenerate `.github/workflows/pr.yml` from this repo:
 ```bash
 node scripts/generate-workflows.mjs
 ```
+
+### Deploy a service with GoldenLambdaApi (CDK construct)
+
+`GoldenLambdaApi` provisions the full Transactionify-style AWS stack — Python
+Lambda, API Gateway REST API, CloudWatch log group, error-rate alarm, and p99
+duration alarm — with standard Golden Path tags applied to every resource.
+
+#### Install peer dependencies first
+
+`aws-cdk-lib` and `constructs` are **optional** peer dependencies. Install them
+only in CDK app repos (not in service repos that only need the workflow generator):
+
+```bash
+# npm
+npm install --save-dev aws-cdk-lib constructs
+
+# pnpm
+pnpm add -D aws-cdk-lib constructs
+```
+
+#### Example CDK stack
+
+```typescript
+import * as path from "node:path";
+import { Stack, StackProps, App } from "aws-cdk-lib";
+import { Construct } from "constructs";
+import { GoldenLambdaApi } from "@loanpro/devex-workflow-framework";
+
+export class TransactionifySandboxStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+
+    const api = new GoldenLambdaApi(this, "TransactionifyApi", {
+      // Matches devex.yaml service.name
+      serviceName: "transactionify",
+
+      // Path to the Python handler source directory (bundled by CDK)
+      handlerPath: path.join(__dirname, "../src"),
+
+      // Must match one of the devex.yaml environments keys
+      environmentName: "sandbox",
+
+      // Optional: adds a devex:work-prefix tag to every resource
+      workTrackingTag: "FIN",
+
+      // Additional Lambda environment variables (TABLE_NAME, etc.)
+      environment: {
+        TABLE_NAME: "my-table",
+      },
+
+      // Tune defaults if needed:
+      // memorySize: 512,
+      // reservedConcurrency: 50,
+      // errorRateThresholdPercent: 5,
+      // p99DurationThresholdMs: 1000,
+    });
+
+    // Exposed CDK resources for further customisation:
+    // api.lambdaFunction  — lambda.Function
+    // api.restApi         — apigw.RestApi
+    // api.logGroup        — logs.LogGroup
+    // api.errorRateAlarm  — cloudwatch.Alarm
+    // api.p99DurationAlarm — cloudwatch.Alarm
+  }
+}
+
+const app = new App();
+new TransactionifySandboxStack(app, "TransactionifySandbox");
+```
+
+#### Resources created
+
+| AWS Resource | ID pattern |
+|---|---|
+| `AWS::Lambda::Function` | `<serviceName>-<environmentName>` |
+| `AWS::ApiGateway::RestApi` | `<serviceName>-<environmentName>` |
+| `AWS::Logs::LogGroup` | `/aws/lambda/<serviceName>-<environmentName>` |
+| `AWS::CloudWatch::Alarm` | `<serviceName>-<environmentName>-error-rate` |
+| `AWS::CloudWatch::Alarm` | `<serviceName>-<environmentName>-p99-duration` |
+
+#### Standard tags applied to all resources
+
+| Tag | Value |
+|---|---|
+| `devex:service` | `serviceName` from props |
+| `devex:environment` | `environmentName` from props |
+| `devex:managed-by` | `devex-workflow-framework` (always) |
+| `devex:work-prefix` | `workTrackingTag` from props (omitted when not provided) |
 
 ---
 
