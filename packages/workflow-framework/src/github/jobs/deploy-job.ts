@@ -58,11 +58,31 @@ export function buildDeployJob(
 
   const steps: GithubStep[] = [
     checkoutStep(),
-    setupNodeStep(),
-    enableCorepackStep(),
-    installNodeDepsStep(workDir),
+    {
+      id: "check-infra-dir",
+      name: "Check infra directory exists",
+      run: [
+        `if [ ! -d "${workDir}" ]; then`,
+        `  echo "::warning::CDK working directory '${workDir}' not found — skipping deployment (infrastructure not yet initialised)."`,
+        `  echo "skip=true" >> "$GITHUB_OUTPUT"`,
+        `fi`,
+      ].join("\n"),
+    },
+    {
+      ...setupNodeStep(),
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
+    },
+    {
+      ...enableCorepackStep(),
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
+    },
+    {
+      ...installNodeDepsStep(workDir),
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
+    },
     {
       name: "Configure AWS credentials (OIDC)",
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
       uses: "aws-actions/configure-aws-credentials@v4",
       with: {
         "role-to-assume": roleArn,
@@ -72,13 +92,14 @@ export function buildDeployJob(
     {
       id: "cdk-deploy",
       name: `Deploy to ${envName}`,
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
       run: `${deployCmd} ${stack}`,
       "working-directory": workDir,
       env: {
         CDK_DEFAULT_REGION: region,
       },
     },
-    // Emit deployment audit event (always runs, even if deploy failed).
+    // Emit deployment audit event (always runs, even if deploy failed/skipped).
     {
       name: "Emit deployment audit event",
       if: "always()",

@@ -211,22 +211,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - id: check-infra-dir
+        name: Check infra directory exists
+        run: |-
+          if [ ! -d "infra" ]; then
+            echo "::warning::CDK working directory 'infra' not found — skipping deployment (infrastructure not yet initialised)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Enable corepack (pnpm)
         run: corepack enable
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: infra
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Configure AWS credentials (OIDC)
+        if: steps.check-infra-dir.outputs.skip != 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_SANDBOX }}
           aws-region: us-east-1
       - id: cdk-deploy
         name: Deploy to sandbox
+        if: steps.check-infra-dir.outputs.skip != 'true'
         run: pnpm cdk deploy --require-approval never TransactionifySandbox
         working-directory: infra
         env:
@@ -290,22 +302,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - id: check-infra-dir
+        name: Check infra directory exists
+        run: |-
+          if [ ! -d "infra" ]; then
+            echo "::warning::CDK working directory 'infra' not found — skipping deployment (infrastructure not yet initialised)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Enable corepack (pnpm)
         run: corepack enable
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: infra
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Configure AWS credentials (OIDC)
+        if: steps.check-infra-dir.outputs.skip != 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_STAGING }}
           aws-region: us-east-1
       - id: cdk-deploy
         name: Deploy to staging
+        if: steps.check-infra-dir.outputs.skip != 'true'
         run: pnpm cdk deploy --require-approval never TransactionifyStaging
         working-directory: infra
         env:
@@ -369,22 +393,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - id: check-infra-dir
+        name: Check infra directory exists
+        run: |-
+          if [ ! -d "infra" ]; then
+            echo "::warning::CDK working directory 'infra' not found — skipping deployment (infrastructure not yet initialised)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Enable corepack (pnpm)
         run: corepack enable
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: infra
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Configure AWS credentials (OIDC)
+        if: steps.check-infra-dir.outputs.skip != 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_PRODUCTION }}
           aws-region: us-east-1
       - id: cdk-deploy
         name: Deploy to production
+        if: steps.check-infra-dir.outputs.skip != 'true'
         run: pnpm cdk deploy --require-approval never TransactionifyProduction
         working-directory: infra
         env:
@@ -463,6 +499,7 @@ jobs:
       - name: Compute DORA metrics and write step summary
         env:
           GITHUB_HEAD_REF: ${{ github.head_ref || '' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |-
           node --input-type=module << 'DEVEX_DORA_COMPUTE'
           import { existsSync, readFileSync, appendFileSync } from "node:fs";
@@ -475,6 +512,9 @@ jobs:
           const branch = process.env.GITHUB_HEAD_REF ?? "";
           const workIdMatch = branch.match(/[A-Z]+-[0-9]+/);
           const workId = workIdMatch ? workIdMatch[0] : null;
+          const fullRepo = process.env.GITHUB_REPOSITORY ?? "";
+          const serviceName = fullRepo.includes("/") ? fullRepo.split("/")[1] : fullRepo;
+          const serviceDisplay = serviceName || fullRepo || "N/A";
           const prodDeps = events.filter(e => e.environment === "production" && (e.doraEventType === "deployment_succeeded" || e.doraEventType === "deployment_failed" || e.doraEventType === "deployment_rolled_back"));
           const deploymentCount = prodDeps.filter(e => e.doraEventType === "deployment_succeeded").length;
           const failedDeploymentCount = prodDeps.filter(e => e.doraEventType === "deployment_failed" || e.doraEventType === "deployment_rolled_back").length;
@@ -487,6 +527,7 @@ jobs:
           const markdown = [
             "## DORA Metrics Summary", "",
             "| Metric | Value |", "|---|---|",
+            "| Service | " + serviceDisplay + " |",
             "| Work ID | " + (workId ?? "N/A") + " |",
             "| Environment | pr |",
             "| Successful Deployments | " + deploymentCount + " |",
