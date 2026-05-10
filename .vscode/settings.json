@@ -2,6 +2,11 @@
   "vitest.rootConfig": "packages/workflow-framework/vitest.config.ts",
   "yaml.schemas": {
     "./packages/workflow-framework/devex.schema.json": "**/devex.yaml"
-  }
+  },
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": [
+    "packages/cli/tests"
+  ],
+  "python.testing.cwd": "${workspaceFolder}"
 }
 

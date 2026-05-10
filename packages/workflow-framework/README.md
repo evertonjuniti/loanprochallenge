@@ -35,13 +35,13 @@ Everything is exported from the single entry point `src/index.ts`.
 Pin the package directly to a release tag. No private registry is required.
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.1.0
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.0
 ```
 
 To update to a newer release:
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.2.0
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.4.0
 ```
 
 ### Option B — GitHub Packages registry (for production purposes)
@@ -52,7 +52,7 @@ For teams using a private npm registry:
 # .npmrc or .pnpmrc in the service repo
 @loanpro:registry=https://npm.pkg.github.com
 
-pnpm add -D @loanpro/devex-workflow-framework@0.1.0
+pnpm add -D @loanpro/devex-workflow-framework@0.3.0
 ```
 
 ### Option C — pnpm workspace (within this monorepo)
@@ -213,38 +213,129 @@ const summary = computeDoraMetrics(events);
 console.log(renderDoraSummaryMarkdown(summary, "FIN-123", "production"));
 ```
 
-### Generate a typed PR pipeline workflow for a service
+### Generate GitHub Actions workflow files
 
-`createPrWorkflow(config)` accepts a validated `DevexConfig` and returns a
-complete `GithubWorkflow` object. `renderWorkflowYaml(workflow)` serialises
-it to a GitHub Actions YAML string.
+The package ships four workflow generators. Each returns a `GithubWorkflow`
+object that `renderWorkflowYaml()` serialises to a GitHub Actions YAML string.
+
+| Generator | Output file | Trigger | Purpose |
+|---|---|---|---|
+| `createCiWorkflow(config)` | `ci.yml` | push to non-main branches | Fast governance + unit/lint feedback during active development |
+| `createPrWorkflow(config)` | `pr.yml` | pull_request | Quality gate before merge: governance → tests → CDK synth |
+| `createMainWorkflow(config)` | `main.yml` | push to main | Full pipeline after merge: governance → tests → CDK synth → deploy → DORA audit |
+| `createSyncWorkflow(config)` | `devex-sync.yml` | workflow_dispatch | Bumps the framework version and regenerates all workflow files via PR |
+
+#### Recommended: use the `devex-workflow generate` command (see next section)
+
+Or call the generators directly in your own script:
 
 ```typescript
-import { loadConfig, createPrWorkflow, renderWorkflowYaml } from "@loanpro/devex-workflow-framework";
+import {
+  loadConfig,
+  createCiWorkflow,
+  createPrWorkflow,
+  createMainWorkflow,
+  createSyncWorkflow,
+  renderWorkflowYaml,
+} from "@loanpro/devex-workflow-framework";
 import { writeFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
 
-const config = await loadConfig("devex.yaml");  // validates against Zod schema
-const workflow = createPrWorkflow(config);
-const yaml = renderWorkflowYaml(workflow);
+const config = loadConfig("devex.yaml");  // synchronous; throws ZodError if invalid
 
 mkdirSync(".github/workflows", { recursive: true });
-writeFileSync(".github/workflows/pr.yml", yaml);
+
+const workflows = [
+  { name: "ci.yml",         workflow: createCiWorkflow(config)   },
+  { name: "pr.yml",         workflow: createPrWorkflow(config)   },
+  { name: "main.yml",       workflow: createMainWorkflow(config) },
+  { name: "devex-sync.yml", workflow: createSyncWorkflow(config) },
+];
+
+for (const { name, workflow } of workflows) {
+  writeFileSync(join(".github/workflows", name), renderWorkflowYaml(workflow));
+}
 ```
 
-The generated workflow contains these jobs, wired in dependency order:
+#### `createPrWorkflow` job graph
 
 | Job | Depends on | Purpose |
 |---|---|---|
 | `governance` | — | Branch name, PR title, commit messages, workflow ref |
 | `small-tests` | governance | Unit, property, contract tests + lint (via language adapter) |
 | `cdk-synth` | small-tests | CDK `cdk synth` (omitted when `infraFramework ≠ aws-cdk-typescript`) |
+
+#### `createMainWorkflow` job graph
+
+| Job | Depends on | Purpose |
+|---|---|---|
+| `governance` | — | Branch name, PR title, commit messages, workflow ref |
+| `small-tests` | governance | Unit, property, contract tests + lint |
+| `cdk-synth` | small-tests | CDK `cdk synth` (omitted when no CDK) |
 | `deploy-<env>` | previous env | Sequential CDK deploy + OIDC credentials per environment |
 | `dora-audit` | last deploy job | Compute DORA metrics, write step summary, upload artifact |
 
-Regenerate `.github/workflows/pr.yml` from this repo:
+---
+
+### `devex-workflow` CLI (installed with the package)
+
+When you install `@loanpro/devex-workflow-framework`, a `devex-workflow` binary
+is added to your local `node_modules/.bin/`. It is the primary way consuming
+repos keep their workflow files up to date.
+
+#### `devex-workflow generate`
+
+Reads `devex.yaml` and (re)generates all four workflow files under `.github/workflows/`:
 
 ```bash
-node scripts/generate-workflows.mjs
+pnpm exec devex-workflow generate
+
+# Custom paths:
+pnpm exec devex-workflow generate --config path/to/devex.yaml --output-dir .github/workflows
+```
+
+Output:
+
+```
+✓ Loaded config for service: transactionify
+  runtime:  python / aws-cdk-typescript
+✓ Generated: .github/workflows/ci.yml
+  Jobs: governance, small-tests
+✓ Generated: .github/workflows/pr.yml
+  Jobs: governance, small-tests, cdk-synth
+✓ Generated: .github/workflows/main.yml
+  Jobs: governance, small-tests, cdk-synth, deploy-sandbox, deploy-staging, deploy-production, dora-audit
+✓ Generated: .github/workflows/devex-sync.yml
+  Jobs: sync
+```
+
+Run this after every change to `devex.yaml` and commit the regenerated files.
+
+#### `devex-workflow setup-repo`
+
+Applies GitHub branch protection rules to the `main` branch so that all PR
+workflow jobs must pass before a PR can be merged. Requires the `gh` CLI to be
+installed and authenticated.
+
+```bash
+pnpm exec devex-workflow setup-repo
+
+# Custom branch:
+pnpm exec devex-workflow setup-repo --branch main --config devex.yaml
+```
+
+The command derives the required check context names from the generated PR
+workflow and calls `gh api repos/{owner}/{repo}/branches/{branch}/protection`.
+
+You can also derive the required checks programmatically:
+
+```typescript
+import { loadConfig, createPrWorkflow, buildBranchProtectionConfig } from "@loanpro/devex-workflow-framework";
+
+const config = loadConfig("devex.yaml");
+const prWorkflow = createPrWorkflow(config);
+const protection = buildBranchProtectionConfig(prWorkflow, { strict: true });
+// protection is ready to POST to the GitHub branch protection API
 ```
 
 ### Deploy a service with GoldenLambdaApi (CDK construct)
@@ -387,7 +478,7 @@ git push origin v<new-version>
 Service repos update by changing their pinned ref:
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.2.0
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.4.0
 ```
 
 ---
