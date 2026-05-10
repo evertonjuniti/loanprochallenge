@@ -59,10 +59,14 @@ if (isInitialPush) {
 
   const messages = rawLog ? rawLog.split("\n") : [];
 
-  if (messages.length === 0) {
-    console.log("⚠️  No new commits found in range — skipping commit message check.");
+  // Filter out GitHub's auto-generated merge commits (e.g. "Merge <sha> into <sha>")
+  // so that PR squash/merge operations don't fail the governance check.
+  const filtered = messages.filter((m) => !m.startsWith("Merge "));
+
+  if (filtered.length === 0) {
+    console.log("⚠️  No new commits found in range (only merge commits) — skipping commit message check.");
   } else {
-    const summary = validateCommitMessages(messages, DEFAULT_WORK_ID_CONFIG);
+    const summary = validateCommitMessages(filtered, DEFAULT_WORK_ID_CONFIG);
     if (summary.violations.length > 0) {
       console.error(`\n❌ Commit message check FAILED (${summary.violations.length}/${summary.total} invalid):`);
       for (const v of summary.violations) {
