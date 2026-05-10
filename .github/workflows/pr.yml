@@ -176,18 +176,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - id: check-infra-dir
+        name: Check infra directory exists
+        run: |-
+          if [ ! -d "infra" ]; then
+            echo "::warning::CDK working directory 'infra' not found — skipping CDK synth (infrastructure not yet initialised)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Enable corepack (pnpm)
         run: corepack enable
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: infra
+        if: steps.check-infra-dir.outputs.skip != 'true'
       - name: CDK synth
         run: pnpm cdk synth
         working-directory: infra
+        if: steps.check-infra-dir.outputs.skip != 'true'
     needs:
       - small-tests
   deploy-sandbox:

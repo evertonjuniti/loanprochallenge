@@ -38,13 +38,33 @@ export function buildCdkSynthJob(
 
   const steps: GithubStep[] = [
     checkoutStep(),
-    setupNodeStep(),
-    enableCorepackStep(),
-    installNodeDepsStep(workDir),
+    {
+      id: "check-infra-dir",
+      name: "Check infra directory exists",
+      run: [
+        `if [ ! -d "${workDir}" ]; then`,
+        `  echo "::warning::CDK working directory '${workDir}' not found — skipping CDK synth (infrastructure not yet initialised)."`,
+        `  echo "skip=true" >> "$GITHUB_OUTPUT"`,
+        `fi`,
+      ].join("\n"),
+    },
+    {
+      ...setupNodeStep(),
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
+    },
+    {
+      ...enableCorepackStep(),
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
+    },
+    {
+      ...installNodeDepsStep(workDir),
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
+    },
     {
       name: "CDK synth",
       run: synthCmd,
       "working-directory": workDir,
+      if: `steps.check-infra-dir.outputs.skip != 'true'`,
     },
   ];
 
