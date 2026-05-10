@@ -14,6 +14,7 @@ Source repository: https://github.com/evertonjuniti/loanprochallenge
 | `governance/` | Work ID validation, branch/commit/PR-title rules, branch name builder |
 | `telemetry/` | Base event types, audit event schema, DORA event schema and metric aggregation |
 | `adapters/` | `LanguageAdapter` interface, `PythonAdapter`, `TypescriptAdapter`, adapter registry |
+| `github/` | Typed GitHub Actions workflow generator: job builders + `createPrWorkflow()` |
 
 Everything is exported from the single entry point `src/index.ts`.
 
@@ -209,6 +210,40 @@ import { computeDoraMetrics, renderDoraSummaryMarkdown } from "@loanpro/devex-wo
 
 const summary = computeDoraMetrics(events);
 console.log(renderDoraSummaryMarkdown(summary, "FIN-123", "production"));
+```
+
+### Generate a typed PR pipeline workflow for a service
+
+`createPrWorkflow(config)` accepts a validated `DevexConfig` and returns a
+complete `GithubWorkflow` object. `renderWorkflowYaml(workflow)` serialises
+it to a GitHub Actions YAML string.
+
+```typescript
+import { loadConfig, createPrWorkflow, renderWorkflowYaml } from "@loanpro/devex-workflow-framework";
+import { writeFileSync, mkdirSync } from "node:fs";
+
+const config = await loadConfig("devex.yaml");  // validates against Zod schema
+const workflow = createPrWorkflow(config);
+const yaml = renderWorkflowYaml(workflow);
+
+mkdirSync(".github/workflows", { recursive: true });
+writeFileSync(".github/workflows/pr.yml", yaml);
+```
+
+The generated workflow contains these jobs, wired in dependency order:
+
+| Job | Depends on | Purpose |
+|---|---|---|
+| `governance` | — | Branch name, PR title, commit messages, workflow ref |
+| `small-tests` | governance | Unit, property, contract tests + lint (via language adapter) |
+| `cdk-synth` | small-tests | CDK `cdk synth` (omitted when `infraFramework ≠ aws-cdk-typescript`) |
+| `deploy-<env>` | previous env | Sequential CDK deploy + OIDC credentials per environment |
+| `dora-audit` | last deploy job | Compute DORA metrics, write step summary, upload artifact |
+
+Regenerate `.github/workflows/pr.yml` from this repo:
+
+```bash
+node scripts/generate-workflows.mjs
 ```
 
 ---
