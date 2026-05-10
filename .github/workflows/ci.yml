@@ -34,12 +34,13 @@ jobs:
       - id: validate-branch
         name: Validate branch name
         env:
-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          BRANCH_NAME: ${{ github.head_ref || '' }}
           WORK_ID_PATTERN: ^[A-Z]+-[0-9]+$
           BRANCH_PATTERN: ^(feature|fix|chore|hotfix)/[A-Z]+-[0-9]+-[a-z0-9-]+$
         run: |-
           node --input-type=module << 'DEVEX_BRANCH_CHECK'
           const branch = process.env.BRANCH_NAME ?? "";
+          if (!branch) { console.log("⚠ No head_ref (push event) — skipping branch name check."); process.exit(0); }
           const branchPattern = process.env.BRANCH_PATTERN ?? "";
           const workIdPattern = process.env.WORK_ID_PATTERN ?? "";
           if (!new RegExp(branchPattern).test(branch)) {
