@@ -51,18 +51,19 @@ export function buildGovernanceJob(
     ...nodeBootstrapSteps(),
 
     // ------------------------------------------------------------------
-    // Step 1 — Branch name
+    // Step 1 — Branch name (skipped on push events, e.g. merge to main)
     // ------------------------------------------------------------------
     {
       id: "validate-branch",
       name: "Validate branch name",
       env: {
-        BRANCH_NAME: "${{ github.head_ref || github.ref_name }}",
+        BRANCH_NAME: "${{ github.head_ref || '' }}",
         WORK_ID_PATTERN: workIdPattern,
         BRANCH_PATTERN: branchPattern,
       },
       run: inlineScript("DEVEX_BRANCH_CHECK", [
         `const branch = process.env.BRANCH_NAME ?? "";`,
+        `if (!branch) { console.log("⚠ No head_ref (push event) — skipping branch name check."); process.exit(0); }`,
         `const branchPattern = process.env.BRANCH_PATTERN ?? "";`,
         `const workIdPattern = process.env.WORK_ID_PATTERN ?? "";`,
         `if (!new RegExp(branchPattern).test(branch)) {`,
