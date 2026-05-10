@@ -4,7 +4,6 @@ import {
   type GovernanceEventType,
   type TestEventType,
   type CdkEventType,
-  createBaseEvent,
 } from "./telemetry-event.js";
 
 // ---------------------------------------------------------------------------

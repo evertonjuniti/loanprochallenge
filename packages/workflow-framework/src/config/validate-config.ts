@@ -1,4 +1,3 @@
-import { ZodError } from "zod";
 import { DevexConfigSchema, type DevexConfig } from "./devex-config.schema.js";
 
 export interface ValidationResult {
