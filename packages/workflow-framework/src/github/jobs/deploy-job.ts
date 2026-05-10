@@ -130,7 +130,7 @@ export function buildDeployJob(
 // ---------------------------------------------------------------------------
 
 function emitAuditEventScript(envName: string): string {
-  const dest = `/tmp/_devex_emit_audit_${envName}.mjs`;
+  const dest = `./_devex_emit_audit_${envName}.mjs`;
   return [
     `cat << 'DEVEX_EMIT_AUDIT_${envName.toUpperCase()}' > ${dest}`,
     `import { createDeploymentAuditEvent, appendEventsToFile } from "@loanpro/devex-workflow-framework";`,

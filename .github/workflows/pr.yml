@@ -4,7 +4,7 @@
 # Do not edit manually — regenerate with:
 #   node scripts/generate-workflows.mjs
 
-name: PR Pipeline
+name: DevEx PR Pipeline — transactionify
 on:
   pull_request:
     types:
@@ -42,7 +42,7 @@ jobs:
           WORK_ID_PATTERN: ^[A-Z]+-[0-9]+$
           BRANCH_PATTERN: ^(feature|fix|chore|hotfix)/[A-Z]+-[0-9]+-[a-z0-9-]+$
         run: |-
-          cat << 'DEVEX_BRANCH_CHECK' > /tmp/_devex_branch_check.mjs
+          cat << 'DEVEX_BRANCH_CHECK' > ./_devex_branch_check.mjs
           import { validateBranchName, DEFAULT_WORK_ID_CONFIG } from "@loanpro/devex-workflow-framework";
           const cfg = {
             ...DEFAULT_WORK_ID_CONFIG,
@@ -56,14 +56,14 @@ jobs:
           }
           console.log("✓ Branch Work ID:", result.workId);
           DEVEX_BRANCH_CHECK
-          node /tmp/_devex_branch_check.mjs
+          node ./_devex_branch_check.mjs
       - id: validate-pr-title
         name: Validate PR title
         env:
           PR_TITLE: ${{ github.event.pull_request.title || '' }}
           PR_TITLE_PATTERN: ^\[[A-Z]+-[0-9]+\] .+
         run: |-
-          cat << 'DEVEX_PR_TITLE_CHECK' > /tmp/_devex_pr_title_check.mjs
+          cat << 'DEVEX_PR_TITLE_CHECK' > ./_devex_pr_title_check.mjs
           import { validatePrTitle, DEFAULT_WORK_ID_CONFIG } from "@loanpro/devex-workflow-framework";
           const title = process.env.PR_TITLE ?? "";
           if (!title) { console.log("⚠ No PR title (push event) — skipping."); process.exit(0); }
@@ -78,7 +78,7 @@ jobs:
           }
           console.log("✓ PR title Work ID:", result.workId);
           DEVEX_PR_TITLE_CHECK
-          node /tmp/_devex_pr_title_check.mjs
+          node ./_devex_pr_title_check.mjs
       - id: validate-commits
         name: Validate commit messages
         env:
@@ -86,7 +86,7 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
           COMMIT_PATTERN: ^\[[A-Z]+-[0-9]+\] .+
         run: |-
-          cat << 'DEVEX_COMMIT_CHECK' > /tmp/_devex_commit_check.mjs
+          cat << 'DEVEX_COMMIT_CHECK' > ./_devex_commit_check.mjs
           import { execSync } from "node:child_process";
           import { validateCommitMessages, DEFAULT_WORK_ID_CONFIG } from "@loanpro/devex-workflow-framework";
           const base = process.env.BASE_SHA ?? "";
@@ -109,13 +109,13 @@ jobs:
           }
           console.log("✓ All " + messages.length + " commit(s) contain a Work ID.");
           DEVEX_COMMIT_CHECK
-          node /tmp/_devex_commit_check.mjs
+          node ./_devex_commit_check.mjs
       - id: validate-workflow-ref
         name: Validate workflow framework ref
         env:
           WORKFLOW_REF: v0.1.0
         run: |-
-          cat << 'DEVEX_REF_CHECK' > /tmp/_devex_ref_check.mjs
+          cat << 'DEVEX_REF_CHECK' > ./_devex_ref_check.mjs
           import { validateWorkflowRef } from "@loanpro/devex-workflow-framework";
           const result = validateWorkflowRef(process.env.WORKFLOW_REF ?? "");
           if (!result.valid) {
@@ -124,7 +124,7 @@ jobs:
           }
           console.log("✓ Workflow ref pinned to:", process.env.WORKFLOW_REF);
           DEVEX_REF_CHECK
-          node /tmp/_devex_ref_check.mjs
+          node ./_devex_ref_check.mjs
   small-tests:
     name: Small Tests
     runs-on: ubuntu-latest
@@ -222,7 +222,7 @@ jobs:
           DEPLOY_OUTCOME: ${{ steps.cdk-deploy.outcome }}
           PR_URL: ${{ github.event.pull_request.html_url || '' }}
         run: |-
-          cat << 'DEVEX_EMIT_AUDIT_SANDBOX' > /tmp/_devex_emit_audit_sandbox.mjs
+          cat << 'DEVEX_EMIT_AUDIT_SANDBOX' > ./_devex_emit_audit_sandbox.mjs
           import { createDeploymentAuditEvent, appendEventsToFile } from "@loanpro/devex-workflow-framework";
           const outcome = process.env.DEPLOY_OUTCOME ?? "unknown";
           const eventType = outcome === "success" ? "deployment_succeeded" : "deployment_failed";
@@ -243,7 +243,7 @@ jobs:
           appendEventsToFile([event]);
           console.log("✓ Audit event emitted:", eventType);
           DEVEX_EMIT_AUDIT_SANDBOX
-          node /tmp/_devex_emit_audit_sandbox.mjs
+          node ./_devex_emit_audit_sandbox.mjs
       - name: Upload audit events
         if: always()
         uses: actions/upload-artifact@v4
@@ -296,7 +296,7 @@ jobs:
           DEPLOY_OUTCOME: ${{ steps.cdk-deploy.outcome }}
           PR_URL: ${{ github.event.pull_request.html_url || '' }}
         run: |-
-          cat << 'DEVEX_EMIT_AUDIT_STAGING' > /tmp/_devex_emit_audit_staging.mjs
+          cat << 'DEVEX_EMIT_AUDIT_STAGING' > ./_devex_emit_audit_staging.mjs
           import { createDeploymentAuditEvent, appendEventsToFile } from "@loanpro/devex-workflow-framework";
           const outcome = process.env.DEPLOY_OUTCOME ?? "unknown";
           const eventType = outcome === "success" ? "deployment_succeeded" : "deployment_failed";
@@ -317,7 +317,7 @@ jobs:
           appendEventsToFile([event]);
           console.log("✓ Audit event emitted:", eventType);
           DEVEX_EMIT_AUDIT_STAGING
-          node /tmp/_devex_emit_audit_staging.mjs
+          node ./_devex_emit_audit_staging.mjs
       - name: Upload audit events
         if: always()
         uses: actions/upload-artifact@v4
@@ -370,7 +370,7 @@ jobs:
           DEPLOY_OUTCOME: ${{ steps.cdk-deploy.outcome }}
           PR_URL: ${{ github.event.pull_request.html_url || '' }}
         run: |-
-          cat << 'DEVEX_EMIT_AUDIT_PRODUCTION' > /tmp/_devex_emit_audit_production.mjs
+          cat << 'DEVEX_EMIT_AUDIT_PRODUCTION' > ./_devex_emit_audit_production.mjs
           import { createDeploymentAuditEvent, appendEventsToFile } from "@loanpro/devex-workflow-framework";
           const outcome = process.env.DEPLOY_OUTCOME ?? "unknown";
           const eventType = outcome === "success" ? "deployment_succeeded" : "deployment_failed";
@@ -391,7 +391,7 @@ jobs:
           appendEventsToFile([event]);
           console.log("✓ Audit event emitted:", eventType);
           DEVEX_EMIT_AUDIT_PRODUCTION
-          node /tmp/_devex_emit_audit_production.mjs
+          node ./_devex_emit_audit_production.mjs
       - name: Upload audit events
         if: always()
         uses: actions/upload-artifact@v4
@@ -427,7 +427,7 @@ jobs:
         env:
           GITHUB_HEAD_REF: ${{ github.head_ref || '' }}
         run: |-
-          cat << 'DEVEX_DORA_COMPUTE' > /tmp/_devex_dora_compute.mjs
+          cat << 'DEVEX_DORA_COMPUTE' > ./_devex_dora_compute.mjs
           import {
             readEventsFromFile,
             computeDoraMetrics,
@@ -451,7 +451,7 @@ jobs:
           writeStepSummary(markdown);
           console.log("✓ DORA summary written to step summary.");
           DEVEX_DORA_COMPUTE
-          node /tmp/_devex_dora_compute.mjs
+          node ./_devex_dora_compute.mjs
       - name: Upload consolidated DORA events
         if: always()
         uses: actions/upload-artifact@v4

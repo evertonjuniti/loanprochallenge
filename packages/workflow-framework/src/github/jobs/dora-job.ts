@@ -91,7 +91,7 @@ export function buildDoraAuditJob(
 // ---------------------------------------------------------------------------
 
 function doraComputeScript(): string {
-  const dest = "/tmp/_devex_dora_compute.mjs";  return [
+  const dest = "./_devex_dora_compute.mjs";  return [
     `cat << 'DEVEX_DORA_COMPUTE' > ${dest}`,
     `import {`,
     `  readEventsFromFile,`,
