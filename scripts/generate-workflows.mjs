@@ -3,16 +3,18 @@
  * scripts/generate-workflows.mjs
  *
  * Generates GitHub Actions workflow YAML files from the devex.yaml config
- * using @loanpro/devex-workflow-framework's typed PR workflow generator.
+ * using @loanpro/devex-workflow-framework's typed workflow generators.
  *
  * Usage (from repo root):
  *   node scripts/generate-workflows.mjs
  *
  * Output:
- *   .github/workflows/pr.yml
+ *   .github/workflows/ci.yml    — governance + small-tests (push to non-main)
+ *   .github/workflows/pr.yml    — governance + small-tests + cdk-synth (pull_request)
+ *   .github/workflows/main.yml  — full pipeline incl. deploy + DORA (push to main)
  *
- * The output file is committed to source control so that GitHub Actions
- * picks it up. Re-run this script whenever devex.yaml or the framework
+ * The output files are committed to source control so that GitHub Actions
+ * picks them up. Re-run this script whenever devex.yaml or the framework
  * version changes.
  */
 
@@ -24,14 +26,19 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..");
 const frameworkDist = join(repoRoot, "packages/workflow-framework/dist/index.js");
 const devexYamlPath = join(repoRoot, "packages/workflow-framework/devex.yaml");
-const outputPath = join(repoRoot, ".github/workflows/pr.yml");
+const workflowsDir = join(repoRoot, ".github/workflows");
 
 // ---------------------------------------------------------------------------
 // 1. Load the framework from the built dist/
 // ---------------------------------------------------------------------------
-const { loadConfig, createPrWorkflow, renderWorkflowYaml } = await import(
-  pathToFileURL(frameworkDist).href
-);
+const {
+  loadConfig,
+  createCiWorkflow,
+  createPrWorkflow,
+  createMainWorkflow,
+  createSyncWorkflow,
+  renderWorkflowYaml,
+} = await import(pathToFileURL(frameworkDist).href);
 
 // ---------------------------------------------------------------------------
 // 2. Load and validate devex.yaml (loadConfig handles YAML parsing)
@@ -43,16 +50,22 @@ console.log(`  runtime:  ${config.runtime.appLanguage} / ${config.runtime.infraF
 console.log(`  environments: ${Object.keys(config.environments).join(", ")}`);
 
 // ---------------------------------------------------------------------------
-// 3. Generate the workflow
+// 3. Generate the workflows
 // ---------------------------------------------------------------------------
-const workflow = createPrWorkflow(config);
-const yaml = renderWorkflowYaml(workflow);
+mkdirSync(workflowsDir, { recursive: true });
 
-// ---------------------------------------------------------------------------
-// 4. Write to .github/workflows/pr.yml
-// ---------------------------------------------------------------------------
-mkdirSync(join(repoRoot, ".github/workflows"), { recursive: true });
-writeFileSync(outputPath, yaml, "utf-8");
+const workflows = [
+  { name: "ci.yml",         creator: createCiWorkflow   },
+  { name: "pr.yml",         creator: createPrWorkflow    },
+  { name: "main.yml",       creator: createMainWorkflow  },
+  { name: "devex-sync.yml", creator: createSyncWorkflow  },
+];
 
-console.log(`✓ Generated: .github/workflows/pr.yml`);
-console.log(`  Jobs: ${Object.keys(workflow.jobs).join(", ")}`);
+for (const { name, creator } of workflows) {
+  const workflow = creator(config);
+  const yaml = renderWorkflowYaml(workflow);
+  const outputPath = join(workflowsDir, name);
+  writeFileSync(outputPath, yaml, "utf-8");
+  console.log(`✓ Generated: .github/workflows/${name}`);
+  console.log(`  Jobs: ${Object.keys(workflow.jobs).join(", ")}`);
+}
