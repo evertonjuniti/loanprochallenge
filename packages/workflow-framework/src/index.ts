@@ -52,7 +52,11 @@ export * from "./github/jobs/small-tests-job.js";
 export * from "./github/jobs/cdk-synth-job.js";
 export * from "./github/jobs/deploy-job.js";
 export * from "./github/jobs/dora-job.js";
+export * from "./github/branch-protection.js";
+export * from "./github/workflows/create-ci-workflow.js";
 export * from "./github/workflows/create-pr-workflow.js";
+export * from "./github/workflows/create-main-workflow.js";
+export * from "./github/workflows/create-sync-workflow.js";
 
 // CDK constructs (Phase 4) — requires aws-cdk-lib ^2.0.0 + constructs ^10.0.0
 export * from "./cdk/tagging.js";
