@@ -62,18 +62,15 @@ export function buildGovernanceJob(
         BRANCH_PATTERN: branchPattern,
       },
       run: inlineScript("DEVEX_BRANCH_CHECK", [
-        `import { validateBranchName, DEFAULT_WORK_ID_CONFIG } from "@loanpro/devex-workflow-framework";`,
-        `const cfg = {`,
-        `  ...DEFAULT_WORK_ID_CONFIG,`,
-        `  workIdPattern: process.env.WORK_ID_PATTERN ?? DEFAULT_WORK_ID_CONFIG.workIdPattern,`,
-        `  branchPattern: process.env.BRANCH_PATTERN ?? DEFAULT_WORK_ID_CONFIG.branchPattern,`,
-        `};`,
-        `const result = validateBranchName(process.env.BRANCH_NAME ?? "", cfg);`,
-        `if (!result.valid) {`,
-        `  process.stderr.write("::error::" + result.message + "\\n");`,
+        `const branch = process.env.BRANCH_NAME ?? "";`,
+        `const branchPattern = process.env.BRANCH_PATTERN ?? "";`,
+        `const workIdPattern = process.env.WORK_ID_PATTERN ?? "";`,
+        `if (!new RegExp(branchPattern).test(branch)) {`,
+        `  process.stderr.write(\`::error::Branch name "\${branch}" does not match required pattern: \${branchPattern}. Expected: <type>/<WORK-ID>-<description> (e.g. feature/FIN-123-fix-login).\\n\`);`,
         `  process.exit(1);`,
         `}`,
-        `console.log("✓ Branch Work ID:", result.workId);`,
+        `const workIdMatch = branch.match(new RegExp(workIdPattern));`,
+        `console.log("✓ Branch Work ID:", workIdMatch ? workIdMatch[0] : "(extracted from branch)");`,
       ]),
     },
 
@@ -88,19 +85,15 @@ export function buildGovernanceJob(
         PR_TITLE_PATTERN: prTitlePattern,
       },
       run: inlineScript("DEVEX_PR_TITLE_CHECK", [
-        `import { validatePrTitle, DEFAULT_WORK_ID_CONFIG } from "@loanpro/devex-workflow-framework";`,
         `const title = process.env.PR_TITLE ?? "";`,
         `if (!title) { console.log("⚠ No PR title (push event) — skipping."); process.exit(0); }`,
-        `const cfg = {`,
-        `  ...DEFAULT_WORK_ID_CONFIG,`,
-        `  prTitlePattern: process.env.PR_TITLE_PATTERN ?? DEFAULT_WORK_ID_CONFIG.prTitlePattern,`,
-        `};`,
-        `const result = validatePrTitle(title, cfg);`,
-        `if (!result.valid) {`,
-        `  process.stderr.write("::error::" + result.message + "\\n");`,
+        `const prTitlePattern = process.env.PR_TITLE_PATTERN ?? "";`,
+        `if (!new RegExp(prTitlePattern).test(title.trim())) {`,
+        `  process.stderr.write(\`::error::PR title "\${title}" does not match required pattern: \${prTitlePattern}. Expected: [WORK-ID] Description (e.g. [FIN-123] Add transaction validation).\\n\`);`,
         `  process.exit(1);`,
         `}`,
-        `console.log("✓ PR title Work ID:", result.workId);`,
+        `const workIdMatch = title.match(/[A-Z]+-[0-9]+/);`,
+        `console.log("✓ PR title Work ID:", workIdMatch ? workIdMatch[0] : null);`,
       ]),
     },
 
@@ -117,7 +110,6 @@ export function buildGovernanceJob(
       },
       run: inlineScript("DEVEX_COMMIT_CHECK", [
         `import { execSync } from "node:child_process";`,
-        `import { validateCommitMessages, DEFAULT_WORK_ID_CONFIG } from "@loanpro/devex-workflow-framework";`,
         `const base = process.env.BASE_SHA ?? "";`,
         `const head = process.env.HEAD_SHA ?? "";`,
         `const range = base && head ? base + ".." + head : "HEAD~1..HEAD";`,
@@ -126,14 +118,11 @@ export function buildGovernanceJob(
         `catch { console.log("⚠ Could not read git range " + range + " — skipping."); process.exit(0); }`,
         `const messages = raw.split("\\n").map(m => m.trim()).filter(Boolean);`,
         `if (messages.length === 0) { console.log("⚠ No commits in range — skipping."); process.exit(0); }`,
-        `const cfg = {`,
-        `  ...DEFAULT_WORK_ID_CONFIG,`,
-        `  commitPattern: process.env.COMMIT_PATTERN ?? DEFAULT_WORK_ID_CONFIG.commitPattern,`,
-        `};`,
-        `const summary = validateCommitMessages(messages, cfg);`,
-        `if (summary.violations.length > 0) {`,
+        `const commitPattern = process.env.COMMIT_PATTERN ?? "";`,
+        `const violations = messages.filter(m => !new RegExp(commitPattern).test(m));`,
+        `if (violations.length > 0) {`,
         `  process.stderr.write("::error::Commits missing Work ID:\\n");`,
-        `  summary.violations.forEach(v => process.stderr.write("  • " + v + "\\n"));`,
+        `  violations.forEach(v => process.stderr.write("  • " + v + "\\n"));`,
         `  process.exit(1);`,
         `}`,
         `console.log("✓ All " + messages.length + " commit(s) contain a Work ID.");`,
@@ -152,13 +141,13 @@ export function buildGovernanceJob(
         WORKFLOW_REF: config.workflowVersion.ref,
       },
       run: inlineScript("DEVEX_REF_CHECK", [
-        `import { validateWorkflowRef } from "@loanpro/devex-workflow-framework";`,
-        `const result = validateWorkflowRef(process.env.WORKFLOW_REF ?? "");`,
-        `if (!result.valid) {`,
-        `  result.errors.forEach(e => process.stderr.write("::error::" + e.message + "\\n"));`,
+        `const ref = process.env.WORKFLOW_REF ?? "";`,
+        `const approved = /^(v\\d+\\.\\d+\\.\\d+|[0-9a-f]{40})$/.test(ref);`,
+        `if (!approved) {`,
+        `  process.stderr.write(\`::error::Ref "\${ref}" is not a pinned semver tag (e.g. v0.1.0) or full 40-char SHA. Using floating refs like "main" or "latest" is prohibited.\\n\`);`,
         `  process.exit(1);`,
         `}`,
-        `console.log("✓ Workflow ref pinned to:", process.env.WORKFLOW_REF);`,
+        `console.log("✓ Workflow ref pinned to:", ref);`,
       ]),
     });
   }
@@ -175,23 +164,21 @@ export function buildGovernanceJob(
 // ---------------------------------------------------------------------------
 
 /**
- * Wraps a list of JavaScript source lines in a `cat`-then-`node` pattern.
+ * Wraps a list of JavaScript source lines in a heredoc piped to
+ * `node --input-type=module` via stdin.
  *
- * The generated `run:` string writes the script to a temp file using a
- * heredoc and then executes it with Node.js in ESM mode.
- *
- * YAML literal block scalars strip the consistent indentation prefix, so
- * the heredoc delimiter lands at column 0 in the shell script — valid bash.
+ * This avoids writing a temp file, so Node.js module resolution never needs
+ * to walk the filesystem looking for node_modules — there is no file location
+ * to resolve from. `node:` built-in imports (e.g. node:child_process) still
+ * work because they bypass the filesystem entirely.
  *
  * @param marker - Unique heredoc delimiter (all-caps, no spaces).
  * @param lines  - Lines of the ESM script body.
  */
 function inlineScript(marker: string, lines: string[]): string {
-  const dest = `./_${marker.toLowerCase()}.mjs`;
   return [
-    `cat << '${marker}' > ${dest}`,
+    `node --input-type=module << '${marker}'`,
     ...lines,
     marker,
-    `node ${dest}`,
   ].join("\n");
 }

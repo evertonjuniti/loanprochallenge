@@ -258,10 +258,11 @@ describe("buildGovernanceJob", () => {
     expect(step).toBeUndefined();
   });
 
-  it("step run scripts import from @loanpro/devex-workflow-framework", () => {
+  it("step run scripts use node --input-type=module and inline validation logic", () => {
     const job = buildGovernanceJob(TRANSACTIONIFY);
     const branchStep = job.steps.find((s) => s.id === "validate-branch");
-    expect(branchStep?.run).toContain("@loanpro/devex-workflow-framework");
+    expect(branchStep?.run).toContain("node --input-type=module");
+    expect(branchStep?.run).not.toContain("@loanpro/devex-workflow-framework");
   });
 });
 
@@ -418,15 +419,15 @@ describe("buildDoraAuditJob", () => {
     expect(downloadStep?.with?.["pattern"]).toBe("audit-events-*");
   });
 
-  it("includes a DORA compute step that imports from the framework", () => {
+  it("includes a DORA compute step using node --input-type=module with inlined logic", () => {
     const job = buildDoraAuditJob(TRANSACTIONIFY);
     const computeStep = job.steps.find(
       (s) => s.name === "Compute DORA metrics and write step summary"
     );
     expect(computeStep).toBeDefined();
-    expect(computeStep?.run).toContain("computeDoraMetrics");
-    expect(computeStep?.run).toContain("renderDoraSummaryMarkdown");
-    expect(computeStep?.run).toContain("writeStepSummary");
+    expect(computeStep?.run).toContain("node --input-type=module");
+    expect(computeStep?.run).toContain("DORA Metrics Summary");
+    expect(computeStep?.run).not.toContain("@loanpro/devex-workflow-framework");
   });
 
   it("uploads a consolidated dora-events artifact", () => {
