@@ -125,13 +125,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
       - name: Run unit tests
-        run: pnpm vitest run
+        run: pnpm --filter @loanpro/devex-workflow-framework test
       - name: Run property-based tests
         run: echo 'No property tests in this package'
       - name: Run contract tests
         run: echo 'No contract tests in this package'
       - name: Lint (eslint)
-        run: pnpm run lint
+        run: pnpm --filter @loanpro/devex-workflow-framework lint
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

@@ -30,10 +30,10 @@ ci:
   smallTests:
     # Per-adapter overrides for this polyglot monorepo.
     typescript:
-      unit: "pnpm vitest run"
+      unit: "pnpm --filter @loanpro/devex-workflow-framework test"
       property: "echo 'No property tests in this package'"
       contract: "echo 'No contract tests in this package'"
-      lint: "pnpm run lint"
+      lint: "pnpm --filter @loanpro/devex-workflow-framework lint"
     python:
       # The Python CLI package lives at packages/cli.
       workingDirectory: packages/cli
