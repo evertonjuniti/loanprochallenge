@@ -1,6 +1,7 @@
 import type { DevexConfig, AppLanguage } from "../config/devex-config.schema.js";
 import type { LanguageAdapter } from "./language-adapter.js";
 import { PythonAdapter } from "./python-adapter.js";
+import { TypescriptAdapter } from "./typescript-adapter.js";
 
 // ---------------------------------------------------------------------------
 // Registry
@@ -17,6 +18,7 @@ import { PythonAdapter } from "./python-adapter.js";
  */
 const ADAPTER_REGISTRY: Partial<Record<AppLanguage, LanguageAdapter>> = {
   python: new PythonAdapter(),
+  typescript: new TypescriptAdapter(),
 };
 
 // ---------------------------------------------------------------------------
@@ -56,5 +58,5 @@ export function supportedLanguages(): AppLanguage[] {
   return Object.keys(ADAPTER_REGISTRY) as AppLanguage[];
 }
 
-export { PythonAdapter };
+export { PythonAdapter, TypescriptAdapter };
 export type { LanguageAdapter };
