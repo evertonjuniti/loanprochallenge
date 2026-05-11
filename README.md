@@ -35,7 +35,7 @@ loanprochallenge/
 ### Component B — `@loanpro/devex-workflow-framework` (TypeScript)
 
 **Location:** `packages/workflow-framework/`  
-**Package:** `@loanpro/devex-workflow-framework` v0.3.2
+**Package:** `@loanpro/devex-workflow-framework` v0.3.3
 
 A shared TypeScript/Node.js library that is the authoritative source for all Golden Path rules. Service repositories install it as a versioned dependency and use it to generate their GitHub Actions workflow files. It is never run directly in production — it runs during CI.
 
@@ -75,7 +75,7 @@ A Python CLI that developers run locally inside their service repositories. It i
 | `devex validate` | Run `devex check`, lint, and all test commands from `devex.yaml` |
 | `devex hooks install` | Render and install `commit-msg` and `pre-push` Git hooks into `.git/hooks/` |
 | `devex hooks install --shared` | Same as above but writes to `.githooks/` and sets `core.hooksPath` — hooks are committed to the repo and shared across the team |
-| `devex upgrade --workflow-version v0.3.2` | Update the pinned framework ref across `devex.yaml` and the caller workflow |
+| `devex upgrade --workflow-version v0.3.3` | Update the pinned framework ref across `devex.yaml` and the caller workflow |
 
 → Full docs: [`packages/cli/README.md`](packages/cli/README.md)
 
@@ -92,7 +92,7 @@ A Python CLI that developers run locally inside their service repositories. It i
 │  .github/workflows/devex-pr.yml  ←─── thin caller workflow      │
 │                    │                                            │
 └────────────────────┼────────────────────────────────────────────┘
-                     │ uses: loanprochallenge/.github/workflows/pr.yml@v0.3.2
+                     │ uses: loanprochallenge/.github/workflows/pr.yml@v0.3.3
                      ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  packages/workflow-framework  (this repo, versioned)            │
@@ -144,7 +144,7 @@ environments:
     githubEnvironment: production
 
 workflowVersion:
-  ref: v0.3.2                      # must be a semver tag or 40-char SHA
+  ref: v0.3.3                      # must be a semver tag or 40-char SHA
 ```
 
 Full schema reference: [`packages/workflow-framework/devex.schema.json`](packages/workflow-framework/devex.schema.json)

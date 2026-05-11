@@ -215,36 +215,45 @@ describe("PythonAdapter workingDirectory", () => {
     ci: { smallTests: { workingDirectory: "packages/cli" } },
   };
 
-  it("setup install step has workingDirectory when configured", () => {
+  it("setup install step embeds directory guard and cd when configured", () => {
     const steps = adapter.setupSteps(monoConfig);
-    // The first two steps use actions/* — no workingDirectory needed.
-    // The third step (run: uv sync) should carry the workingDirectory.
     const installStep = steps.find((s) => s.run?.includes("uv sync"));
-    expect(installStep?.workingDirectory).toBe("packages/cli");
+    expect(installStep?.run).toContain(`if [ ! -d "packages/cli" ]`);
+    expect(installStep?.run).toContain(`cd "packages/cli"`);
+    expect(installStep?.workingDirectory).toBeUndefined();
   });
 
-  it("unit test step has workingDirectory when configured", () => {
+  it("unit test step embeds directory guard and cd when configured", () => {
     const [step] = adapter.unitTestSteps(monoConfig);
-    expect(step!.workingDirectory).toBe("packages/cli");
+    expect(step!.run).toContain(`if [ ! -d "packages/cli" ]`);
+    expect(step!.run).toContain(`cd "packages/cli"`);
+    expect(step!.workingDirectory).toBeUndefined();
   });
 
-  it("property test step has workingDirectory when configured", () => {
+  it("property test step embeds directory guard and cd when configured", () => {
     const [step] = adapter.propertyTestSteps(monoConfig);
-    expect(step!.workingDirectory).toBe("packages/cli");
+    expect(step!.run).toContain(`if [ ! -d "packages/cli" ]`);
+    expect(step!.run).toContain(`cd "packages/cli"`);
+    expect(step!.workingDirectory).toBeUndefined();
   });
 
-  it("contract test step has workingDirectory when configured", () => {
+  it("contract test step embeds directory guard and cd when configured", () => {
     const [step] = adapter.contractTestSteps(monoConfig);
-    expect(step!.workingDirectory).toBe("packages/cli");
+    expect(step!.run).toContain(`if [ ! -d "packages/cli" ]`);
+    expect(step!.run).toContain(`cd "packages/cli"`);
+    expect(step!.workingDirectory).toBeUndefined();
   });
 
-  it("lint step has workingDirectory when configured", () => {
+  it("lint step embeds directory guard and cd when configured", () => {
     const [step] = adapter.lintSteps(monoConfig);
-    expect(step!.workingDirectory).toBe("packages/cli");
+    expect(step!.run).toContain(`if [ ! -d "packages/cli" ]`);
+    expect(step!.run).toContain(`cd "packages/cli"`);
+    expect(step!.workingDirectory).toBeUndefined();
   });
 
-  it("workingDirectory is undefined when not configured", () => {
+  it("no directory guard or cd when workingDirectory is not configured", () => {
     const [unitStep] = adapter.unitTestSteps(baseConfig);
+    expect(unitStep!.run).not.toContain("cd ");
     expect(unitStep!.workingDirectory).toBeUndefined();
   });
 
@@ -290,11 +299,13 @@ describe("PythonAdapter per-language config", () => {
     expect(step!.run).toContain("--select ALL");
   });
 
-  it("per-language python.workingDirectory is used for all run steps", () => {
+  it("per-language python.workingDirectory is embedded in run scripts for all steps", () => {
     const [unitStep] = adapter.unitTestSteps(polyConfig);
-    expect(unitStep!.workingDirectory).toBe("packages/cli");
+    expect(unitStep!.run).toContain(`cd "packages/cli"`);
+    expect(unitStep!.workingDirectory).toBeUndefined();
     const [lintStep] = adapter.lintSteps(polyConfig);
-    expect(lintStep!.workingDirectory).toBe("packages/cli");
+    expect(lintStep!.run).toContain(`cd "packages/cli"`);
+    expect(lintStep!.workingDirectory).toBeUndefined();
   });
 
   it("falls back to top-level workingDirectory when no per-language key is set", () => {
@@ -303,6 +314,7 @@ describe("PythonAdapter per-language config", () => {
       ci: { smallTests: { workingDirectory: "apps/api" } },
     };
     const [step] = adapter.unitTestSteps(config);
-    expect(step!.workingDirectory).toBe("apps/api");
+    expect(step!.run).toContain(`cd "apps/api"`);
+    expect(step!.workingDirectory).toBeUndefined();
   });
 });

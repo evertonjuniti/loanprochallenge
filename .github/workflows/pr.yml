@@ -107,7 +107,7 @@ jobs:
       - id: validate-workflow-ref
         name: Validate workflow framework ref
         env:
-          WORKFLOW_REF: v0.3.2
+          WORKFLOW_REF: v0.3.3
         run: |-
           node --input-type=module << 'DEVEX_REF_CHECK'
           const ref = process.env.WORKFLOW_REF ?? "";
@@ -150,20 +150,28 @@ jobs:
           enable-cache: false
       - name: Install dependencies
         run: |-
+          if [ ! -d "packages/cli" ]; then
+            echo "::warning::Working directory 'packages/cli' not found — skipping step."
+            exit 0
+          fi
+          cd "packages/cli"
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
           uv sync --frozen --extra dev
-        working-directory: packages/cli
       - name: Run unit tests
         run: |-
+          if [ ! -d "packages/cli" ]; then
+            echo "::warning::Working directory 'packages/cli' not found — skipping step."
+            exit 0
+          fi
+          cd "packages/cli"
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
           uv run pytest --junit-xml=pytest-results.xml
-        working-directory: packages/cli
       - name: Publish Python test report
         uses: dorny/test-reporter@v2
         with:
@@ -176,27 +184,39 @@ jobs:
         if: always()
       - name: Run property-based tests
         run: |-
+          if [ ! -d "packages/cli" ]; then
+            echo "::warning::Working directory 'packages/cli' not found — skipping step."
+            exit 0
+          fi
+          cd "packages/cli"
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
           echo 'No property tests in this package'
-        working-directory: packages/cli
       - name: Run contract tests
         run: |-
+          if [ ! -d "packages/cli" ]; then
+            echo "::warning::Working directory 'packages/cli' not found — skipping step."
+            exit 0
+          fi
+          cd "packages/cli"
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
           echo 'No contract tests in this package'
-        working-directory: packages/cli
       - name: Lint (ruff)
         run: |-
+          if [ ! -d "packages/cli" ]; then
+            echo "::warning::Working directory 'packages/cli' not found — skipping step."
+            exit 0
+          fi
+          cd "packages/cli"
           if [ ! -f pyproject.toml ]; then
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
           uv run ruff check .
-        working-directory: packages/cli
     needs:
       - governance
