@@ -8,11 +8,9 @@
 
 from __future__ import annotations
 
-import stat
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from devex_cli.commands.branch import _slugify

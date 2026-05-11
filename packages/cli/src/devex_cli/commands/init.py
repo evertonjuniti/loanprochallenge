@@ -14,9 +14,7 @@ Steps performed:
 
 from __future__ import annotations
 
-import os
 import stat
-import subprocess
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Optional
@@ -257,9 +255,6 @@ def init(
     if not skip_check:
         console.print("[dim]Running devex check…[/]")
         console.print()
-        from devex_cli.commands.check import check as run_check
-        from click.testing import CliRunner  # noqa: F401 — used via typer context
-
         try:
             # Re-invoke via the same Python process using the Typer app runner
             from typer.testing import CliRunner as TyperRunner
