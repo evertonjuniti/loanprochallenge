@@ -118,11 +118,29 @@ export class PythonAdapter implements LanguageAdapter {
    */
   unitTestSteps(config: DevexConfig): WorkflowStep[] {
     const cmd = firstDefined(config.ci?.smallTests?.python?.unit, config.ci?.smallTests?.unit, DEFAULTS.unit);
+    // Append JUnit XML output so GitHub Actions can surface a structured test
+    // report alongside the TypeScript/Vitest report.
+    const junitCmd = `${cmd} --junit-xml=pytest-results.xml`;
+    const wd = config.ci?.smallTests?.python?.workingDirectory ?? config.ci?.smallTests?.workingDirectory;
+    const junitPath = wd ? `${wd}/pytest-results.xml` : "pytest-results.xml";
     return [
       {
         name: "Run unit tests",
-        run: withPyprojectGuard(cmd),
+        run: withPyprojectGuard(junitCmd),
         ...spreadWorkingDirectory(config),
+      },
+      {
+        name: "Publish Python test report",
+        uses: "dorny/test-reporter@v2",
+        condition: "always()",
+        continueOnError: true,
+        with: {
+          name: "Python Tests",
+          path: junitPath,
+          reporter: "java-junit",
+          "fail-on-error": "false",
+          "fail-on-empty": "false",
+        },
       },
     ];
   }

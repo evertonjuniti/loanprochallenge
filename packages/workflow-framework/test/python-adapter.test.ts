@@ -77,8 +77,11 @@ describe("PythonAdapter.unitTestSteps", () => {
     expect(step!.run).toContain("uv run pytest tests/unit -x --tb=short");
   });
 
-  it("returns exactly one step", () => {
-    expect(adapter.unitTestSteps(baseConfig)).toHaveLength(1);
+  it("returns a test step and a reporter step", () => {
+    const steps = adapter.unitTestSteps(baseConfig);
+    expect(steps).toHaveLength(2);
+    expect(steps[0]!.run).toContain("pytest");
+    expect(steps[1]!.uses).toBe("dorny/test-reporter@v2");
   });
 });
 
