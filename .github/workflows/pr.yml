@@ -148,7 +148,7 @@ jobs:
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
-          uv sync --frozen
+          uv sync --frozen --extra dev
       - name: Run unit tests
         working-directory: packages/cli
         run: |-

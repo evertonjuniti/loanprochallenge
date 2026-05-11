@@ -7,7 +7,7 @@ import type { LanguageAdapter, WorkflowStep } from "./language-adapter.js";
 
 const DEFAULTS = {
   /** uv is the recommended package manager for Python services in LoanPro. */
-  setup: "uv sync --frozen",
+  setup: "uv sync --frozen --extra dev",
   unit: "uv run pytest tests/unit",
   property: "uv run pytest tests/property",
   contract: "uv run pytest tests/contracts",
@@ -86,7 +86,7 @@ export class PythonAdapter implements LanguageAdapter {
    * Steps:
    * 1. actions/setup-python — installs the configured Python version.
    * 2. Install uv — the package manager used by LoanPro Python services.
-   * 3. uv sync --frozen — installs dependencies from the lockfile.
+   * 3. uv sync --frozen --extra dev — installs dependencies (including dev extras) from the lockfile.
    */
   setupSteps(config: DevexConfig): WorkflowStep[] {
     return [
