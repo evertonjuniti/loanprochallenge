@@ -56,14 +56,14 @@ LANGUAGE_DEFAULTS: dict[str, LanguageDefaults] = {
     "python": LanguageDefaults(
         display_name="Python (uv + pytest + ruff)",
         test_command="uv run pytest",
-        lint_command="uv run ruff check .",
+        lint_command="uvx ruff check .",
         contract_test_command="uv run pytest tests/contracts",
         property_test_command="uv run pytest tests/property",
         ci_setup="uv sync --frozen",
         ci_unit="uv run pytest tests/unit",
         ci_property="uv run pytest tests/property",
         ci_contract="uv run pytest tests/contracts",
-        ci_lint="uv run ruff check .",
+        ci_lint="uvx ruff check .",
         default_infra_language="typescript",
         notes=[
             "Use `uv add <pkg>` to add dependencies.",
