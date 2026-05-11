@@ -4,6 +4,15 @@
 
 set -e
 
+# Resolve uv — git hooks run with a minimal PATH so the uv binary may not be
+# found even when it works in an interactive terminal. Create a shell function
+# that delegates to "python -m uv" so that any "uv run …" commands below work
+# transparently without needing to rewrite the individual command strings.
+if ! command -v uv &>/dev/null && python -m uv --version &>/dev/null 2>&1; then
+  uv() { python -m uv "$@"; }
+  export -f uv
+fi
+
 echo ""
 echo "  devex: Running pre-push checks for {{ service_name }}…"
 echo ""

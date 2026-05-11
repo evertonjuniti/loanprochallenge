@@ -215,7 +215,7 @@ git push origin v<new-version>
 Service repos then update their pinned ref:
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.2.0
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.1
 ```
 
 ---

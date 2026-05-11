@@ -18,7 +18,7 @@
  * version changes.
  */
 
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -26,7 +26,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..");
 const frameworkDist = join(repoRoot, "packages/workflow-framework/dist/index.js");
 const devexYamlPath = join(repoRoot, "packages/workflow-framework/devex.yaml");
+const packageJsonPath = join(repoRoot, "packages/workflow-framework/package.json");
 const workflowsDir = join(repoRoot, ".github/workflows");
+
+// ---------------------------------------------------------------------------
+// Read the current package version and derive the semver tag used as the
+// workflow framework ref in generated workflow files.
+// ---------------------------------------------------------------------------
+const { version: pkgVersion } = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+const workflowRef = `v${pkgVersion}`;
 
 // ---------------------------------------------------------------------------
 // 1. Load the framework from the built dist/
@@ -41,11 +49,19 @@ const {
 } = await import(pathToFileURL(frameworkDist).href);
 
 // ---------------------------------------------------------------------------
-// 2. Load and validate devex.yaml (loadConfig handles YAML parsing)
+// 2. Load and validate devex.yaml, then inject the version from package.json
+//    so generated workflows always reference the current package version
+//    without hardcoding a ref inside devex.yaml.
 // ---------------------------------------------------------------------------
 const config = await loadConfig(devexYamlPath);
 
+// Override (or set) workflowVersion.ref from the package version so that
+// the governance ref-check step in generated workflows stays in sync
+// automatically whenever the package version is bumped.
+config.workflowVersion = { ref: workflowRef };
+
 console.log(`✓ Loaded devex.yaml for service: ${config.service.name}`);
+console.log(`  workflowVersion.ref: ${workflowRef} (from package.json)`);
 console.log(`  runtime:  ${config.runtime.appLanguage} / ${config.runtime.infraFramework}`);
 console.log(`  environments: ${Object.keys(config.environments).join(", ")}`);
 
@@ -69,3 +85,10 @@ for (const { name, creator } of workflows) {
   console.log(`✓ Generated: .github/workflows/${name}`);
   console.log(`  Jobs: ${Object.keys(workflow.jobs).join(", ")}`);
 }
+
+// ---------------------------------------------------------------------------
+// 4. Keep README version references in sync with package.json
+// ---------------------------------------------------------------------------
+console.log("");
+console.log("Updating README version references...");
+await import(pathToFileURL(join(repoRoot, "scripts/update-docs-version.mjs")).href);

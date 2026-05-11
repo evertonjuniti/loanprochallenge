@@ -100,7 +100,7 @@ jobs:
       - id: validate-workflow-ref
         name: Validate workflow framework ref
         env:
-          WORKFLOW_REF: v0.3.0
+          WORKFLOW_REF: v0.3.1
         run: |-
           node --input-type=module << 'DEVEX_REF_CHECK'
           const ref = process.env.WORKFLOW_REF ?? "";

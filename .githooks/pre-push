@@ -15,6 +15,19 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+# ---------------------------------------------------------------------------
+# Resolve uv — git hooks run with a minimal PATH so uv may not be found
+# even when it works fine in an interactive terminal.
+# ---------------------------------------------------------------------------
+if command -v uv &>/dev/null; then
+  UV="uv"
+elif python -m uv --version &>/dev/null 2>&1; then
+  UV="python -m uv"
+else
+  echo "✗ uv not found. Install it from https://docs.astral.sh/uv/ and ensure it is on PATH."
+  exit 1
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║         pre-push validation              ║"
@@ -38,13 +51,13 @@ pnpm --filter @loanpro/devex-workflow-framework test
 # ---------------------------------------------------------------------------
 echo ""
 echo "▶ [cli] sync dependencies (frozen)"
-(cd packages/cli && uv sync --frozen --extra dev --quiet)
+(cd packages/cli && $UV sync --frozen --extra dev --quiet)
 
 echo "▶ [cli] ruff lint"
-(cd packages/cli && uv run ruff check src tests)
+(cd packages/cli && $UV run ruff check src tests)
 
 echo "▶ [cli] pytest"
-(cd packages/cli && uv run pytest)
+(cd packages/cli && $UV run pytest)
 
 echo ""
 echo "✓ All checks passed — push allowed."
