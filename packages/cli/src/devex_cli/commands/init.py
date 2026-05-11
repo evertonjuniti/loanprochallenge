@@ -35,7 +35,7 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 # GitHub org/repo that owns the centralized reusable workflow.
-DEFAULT_ORG = "loanpro"
+DEFAULT_ORG = "evertonjuniti"
 DEFAULT_REPO = "loanprochallenge"
 
 _SUPPORTED_LANGUAGES = list(LANGUAGE_DEFAULTS.keys())
@@ -76,8 +76,8 @@ def init(
     ] = "aws-cdk-typescript",
     workflow_ref: Annotated[
         str,
-        typer.Option("--workflow-ref", prompt="Workflow framework version (e.g. v0.2.4)"),
-    ] = "v0.2.4",
+        typer.Option("--workflow-ref", prompt="Workflow framework version (e.g. v0.3.3)"),
+    ] = "v0.3.3",
     service_type: Annotated[
         str,
         typer.Option("--service-type"),

@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   devex-pr:
-    uses: loanpro/loanprochallenge/.github/workflows/pr.yml@v0.3.2
+    uses: evertonjuniti/loanprochallenge/.github/workflows/pr.yml@v0.3.3
     with:
       config-path: devex.yaml
     secrets: inherit
