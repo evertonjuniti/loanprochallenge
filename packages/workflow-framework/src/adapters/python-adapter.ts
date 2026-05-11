@@ -37,25 +37,33 @@ function firstDefined(...candidates: (string | undefined)[]): string {
  * rather than failing the workflow. This allows the Golden Path to be used
  * in repos that don't yet have a Python project bootstrapped.
  */
-function withPyprojectGuard(cmd: string): string {
-  return [
+function withPyprojectGuard(cmd: string, workingDir?: string): string {
+  const lines: string[] = [];
+  if (workingDir) {
+    lines.push(
+      `if [ ! -d "${workingDir}" ]; then`,
+      `  echo "::warning::Working directory '${workingDir}' not found — skipping step."`,
+      `  exit 0`,
+      `fi`,
+      `cd "${workingDir}"`,
+    );
+  }
+  lines.push(
     `if [ ! -f pyproject.toml ]; then`,
     `  echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."`,
     `  exit 0`,
     `fi`,
     cmd,
-  ].join("\n");
+  );
+  return lines.join("\n");
 }
 
 /**
- * Returns the configured `ci.smallTests.workingDirectory`, or `undefined`.
- * When set, every `run`-based adapter step will include `working-directory`
- * so that the `pyproject.toml` guard and all Python commands run from the
- * correct subdirectory (e.g. `packages/cli` in a monorepo).
+ * Returns the configured `ci.smallTests.python.workingDirectory` or
+ * `ci.smallTests.workingDirectory`, or `undefined`.
  */
-function spreadWorkingDirectory(config: DevexConfig): { workingDirectory: string } | Record<string, never> {
-  const wd = config.ci?.smallTests?.python?.workingDirectory ?? config.ci?.smallTests?.workingDirectory;
-  return wd !== undefined ? { workingDirectory: wd } : {};
+function getWorkingDir(config: DevexConfig): string | undefined {
+  return config.ci?.smallTests?.python?.workingDirectory ?? config.ci?.smallTests?.workingDirectory;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,8 +114,7 @@ export class PythonAdapter implements LanguageAdapter {
       },
       {
         name: "Install dependencies",
-        run: withPyprojectGuard(DEFAULTS.setup),
-        ...spreadWorkingDirectory(config),
+        run: withPyprojectGuard(DEFAULTS.setup, getWorkingDir(config)),
       },
     ];
   }
@@ -121,13 +128,12 @@ export class PythonAdapter implements LanguageAdapter {
     // Append JUnit XML output so GitHub Actions can surface a structured test
     // report alongside the TypeScript/Vitest report.
     const junitCmd = `${cmd} --junit-xml=pytest-results.xml`;
-    const wd = config.ci?.smallTests?.python?.workingDirectory ?? config.ci?.smallTests?.workingDirectory;
+    const wd = getWorkingDir(config);
     const junitPath = wd ? `${wd}/pytest-results.xml` : "pytest-results.xml";
     return [
       {
         name: "Run unit tests",
-        run: withPyprojectGuard(junitCmd),
-        ...spreadWorkingDirectory(config),
+        run: withPyprojectGuard(junitCmd, wd),
       },
       {
         name: "Publish Python test report",
@@ -154,8 +160,7 @@ export class PythonAdapter implements LanguageAdapter {
     return [
       {
         name: "Run property-based tests",
-        run: withPyprojectGuard(cmd),
-        ...spreadWorkingDirectory(config),
+        run: withPyprojectGuard(cmd, getWorkingDir(config)),
       },
     ];
   }
@@ -169,8 +174,7 @@ export class PythonAdapter implements LanguageAdapter {
     return [
       {
         name: "Run contract tests",
-        run: withPyprojectGuard(cmd),
-        ...spreadWorkingDirectory(config),
+        run: withPyprojectGuard(cmd, getWorkingDir(config)),
       },
     ];
   }
@@ -184,8 +188,7 @@ export class PythonAdapter implements LanguageAdapter {
     return [
       {
         name: "Lint (ruff)",
-        run: withPyprojectGuard(cmd),
-        ...spreadWorkingDirectory(config),
+        run: withPyprojectGuard(cmd, getWorkingDir(config)),
       },
     ];
   }

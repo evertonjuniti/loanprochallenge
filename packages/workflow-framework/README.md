@@ -35,7 +35,7 @@ Everything is exported from the single entry point `src/index.ts`.
 Pin the package directly to a release tag. No private registry is required.
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.2
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.3
 ```
 
 To update to a newer release, replace the tag with the desired version:
@@ -52,7 +52,7 @@ For teams using a private npm registry:
 # .npmrc or .pnpmrc in the service repo
 @loanpro:registry=https://npm.pkg.github.com
 
-pnpm add -D @loanpro/devex-workflow-framework@0.3.2
+pnpm add -D @loanpro/devex-workflow-framework@0.3.3
 ```
 
 ### Option C — pnpm workspace (within this monorepo)
@@ -509,7 +509,7 @@ git push origin v<new-version>
 Service repos update by changing their pinned ref:
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.2
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.3
 ```
 
 ---
