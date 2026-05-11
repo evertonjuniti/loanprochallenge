@@ -1,6 +1,6 @@
 import type { DevexConfig } from "../../config/devex-config.schema.js";
 import { resolveAdapters } from "../../adapters/index.js";
-import { checkoutStep, nodeBootstrapSteps } from "../steps.js";
+import { checkoutStep } from "../steps.js";
 import { toGithubStep } from "../types.js";
 import type { GithubJob, GithubStep } from "../types.js";
 
@@ -48,17 +48,15 @@ export function buildSmallTestsJob(
     ...adapter.lintSteps(config),
   ]).map(toGithubStep);
 
-  // The TypeScript adapter's setupSteps already include setup-node + corepack
-  // + pnpm install, so we only prepend the shared Node bootstrap when no
-  // TypeScript adapter is present (e.g. pure Python or Go repos).
-  const hasTypescriptAdapter = adapters.some((a) => a.name === "typescript");
-
+  // Each adapter's setupSteps() installs its own runtime (Node/pnpm for
+  // TypeScript, Python/uv for Python, etc.). No shared bootstrap is prepended
+  // here — adding Node.js steps for a pure Python repo would cause
+  // `pnpm install` to fail when there is no package.json at the repo root.
   const job: GithubJob = {
     name: "Small Tests",
     "runs-on": runsOn,
     steps: [
       checkoutStep(),
-      ...(hasTypescriptAdapter ? [] : nodeBootstrapSteps()),
       ...adapterSteps,
     ],
   };

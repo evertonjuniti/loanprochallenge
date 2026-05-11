@@ -106,11 +106,7 @@ export class PythonAdapter implements LanguageAdapter {
       },
       {
         name: "Install dependencies",
-        run: withPyprojectGuard(
-          firstDefined(config.local?.testCommand, DEFAULTS.setup).startsWith("uv")
-            ? DEFAULTS.setup
-            : DEFAULTS.setup
-        ),
+        run: withPyprojectGuard(DEFAULTS.setup),
         ...spreadWorkingDirectory(config),
       },
     ];

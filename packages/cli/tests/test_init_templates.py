@@ -108,9 +108,11 @@ class TestInitCallerWorkflow:
         assert (tmp_path / ".github" / "workflows" / "devex-pr.yml").exists()
 
     def test_workflow_uses_correct_ref(self, tmp_path: Path):
-        _run_init(tmp_path, workflow_ref="v0.3.0")
+        # Use an obviously-arbitrary version to confirm the template
+        # substitution mechanism works, not to pin the framework's actual version.
+        _run_init(tmp_path, workflow_ref="v99.0.0")
         content = (tmp_path / ".github" / "workflows" / "devex-pr.yml").read_text()
-        assert "@v0.3.0" in content
+        assert "@v99.0.0" in content
 
     def test_workflow_passes_config_path(self, tmp_path: Path):
         _run_init(tmp_path)

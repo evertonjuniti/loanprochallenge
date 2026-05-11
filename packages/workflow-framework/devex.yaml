@@ -52,5 +52,7 @@ telemetry:
   sink: github-artifact
   auditFormat: ndjson
 
-workflowVersion:
-  ref: v0.3.0
+# workflowVersion.ref is intentionally absent here.
+# scripts/generate-workflows.mjs injects it automatically from
+# packages/workflow-framework/package.json so that generated workflow
+# files always reflect the current package version.

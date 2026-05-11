@@ -35,13 +35,13 @@ Everything is exported from the single entry point `src/index.ts`.
 Pin the package directly to a release tag. No private registry is required.
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.0
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.1
 ```
 
-To update to a newer release:
+To update to a newer release, replace the tag with the desired version:
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.4.0
+pnpm add -D github:evertonjuniti/loanprochallenge#<next-tag>
 ```
 
 ### Option B — GitHub Packages registry (for production purposes)
@@ -52,7 +52,7 @@ For teams using a private npm registry:
 # .npmrc or .pnpmrc in the service repo
 @loanpro:registry=https://npm.pkg.github.com
 
-pnpm add -D @loanpro/devex-workflow-framework@0.3.0
+pnpm add -D @loanpro/devex-workflow-framework@0.3.1
 ```
 
 ### Option C — pnpm workspace (within this monorepo)
@@ -293,6 +293,19 @@ for (const { name, workflow } of workflows) {
 | `deploy-<env>` | previous env | Sequential CDK deploy + OIDC credentials per environment |
 | `dora-audit` | last deploy job | Compute DORA metrics, write step summary, upload artifact |
 
+#### DORA metrics summary
+
+The `dora-audit` job always runs (`if: always()`) so telemetry is captured even when deploy jobs fail. It writes a Markdown table to the GitHub Step Summary with these fields:
+
+| Field | Source |
+|---|---|
+| Service | `github.repository` (repo name portion) |
+| Work ID | `GITHUB_HEAD_REF` branch name (regex `[A-Z]+-[0-9]+`), falling back to the `workId` field already present in each emitted DORA event |
+| Environment | Derived from the `environment` field of the collected events (e.g. `sandbox`, `production`) — never hardcoded |
+| Deployment counts | Counts of `deployment_succeeded` and `deployment_failed`/`deployment_rolled_back` events where `environment === "production"` |
+| Change Failure Rate | `failed / total` production deployments |
+| Lead Time for Changes | Average of `leadTimeSeconds` across events that have `firstCommitAt` set |
+
 ---
 
 ### `devex-workflow` CLI (installed with the package)
@@ -496,7 +509,7 @@ git push origin v<new-version>
 Service repos update by changing their pinned ref:
 
 ```bash
-pnpm add -D github:evertonjuniti/loanprochallenge#v0.4.0
+pnpm add -D github:evertonjuniti/loanprochallenge#v0.3.1
 ```
 
 ---

@@ -1,8 +1,12 @@
 """`devex hooks` — install or reinstall Git hooks for a service repository.
 
 Sub-commands:
-    devex hooks install          — install commit-msg and pre-push hooks
-    devex hooks install --force  — overwrite existing hooks
+    devex hooks install           — install commit-msg and pre-push hooks
+    devex hooks install --force   — overwrite existing hooks
+    devex hooks install --shared  — write hooks to .githooks/ (committed to
+                                    the repo) and set core.hooksPath so every
+                                    developer only needs to run this once after
+                                    cloning.
 
 The hooks are rendered from the same Jinja2 templates used by `devex init`,
 using the language defaults declared in devex.yaml.
@@ -11,6 +15,7 @@ using the language defaults declared in devex.yaml.
 from __future__ import annotations
 
 import stat
+import subprocess
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -37,6 +42,17 @@ def install(
     force: Annotated[
         bool,
         typer.Option("--force", "-f", help="Overwrite existing hooks."),
+    ] = False,
+    shared: Annotated[
+        bool,
+        typer.Option(
+            "--shared",
+            help=(
+                "Write hooks to .githooks/ (committed to the repo) instead of "
+                ".git/hooks/ (local only), and set git core.hooksPath. "
+                "Recommended for monorepos and teams that want hooks in source control."
+            ),
+        ),
     ] = False,
     root: Annotated[
         Optional[Path],
@@ -99,19 +115,49 @@ def install(
     console.print(f"[bold]devex hooks install[/] — {cfg.service.name}")
     console.print()
 
+    if shared:
+        hooks_dir = repo_root / ".githooks"
+        mode_note = "[dim](shared — committed to repo)[/dim]"
+    else:
+        hooks_dir = repo_root / ".git" / "hooks"
+        mode_note = "[dim](local — .git/hooks)[/dim]"
+
+    console.print(f"  Hooks directory: {hooks_dir}  {mode_note}")
+    console.print()
+
     _write_hook(
-        repo_root / ".git" / "hooks" / "commit-msg",
+        hooks_dir / "commit-msg",
         jinja_env.get_template("commit-msg-hook.j2").render(**ctx),
         force=force,
     )
     _write_hook(
-        repo_root / ".git" / "hooks" / "pre-push",
+        hooks_dir / "pre-push",
         jinja_env.get_template("pre-push-hook.j2").render(**ctx),
         force=force,
     )
 
+    if shared:
+        try:
+            subprocess.run(
+                ["git", "config", "core.hooksPath", ".githooks"],
+                cwd=repo_root,
+                check=True,
+                capture_output=True,
+            )
+            console.print("  [green]✓[/] core.hooksPath set to .githooks")
+        except subprocess.CalledProcessError as exc:
+            console.print(f"  [bold red]✗[/] Failed to set core.hooksPath: {exc}")
+            raise typer.Exit(1)
+
     console.print()
     console.print("[bold green]✓[/] Git hooks installed.")
+    if shared:
+        console.print(
+            "  Commit [bold].githooks/[/] to your repository so team members share the same hooks."
+        )
+        console.print(
+            "  New clones only need to run [bold]devex hooks install --shared[/] once to activate."
+        )
 
 
 def _write_hook(path: Path, content: str, *, force: bool) -> None:
