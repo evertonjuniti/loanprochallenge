@@ -151,8 +151,18 @@ jobs:
             echo "::warning::No pyproject.toml found — skipping Python step (project not yet initialised)."
             exit 0
           fi
-          uv run pytest
+          uv run pytest --junit-xml=pytest-results.xml
         working-directory: packages/cli
+      - name: Publish Python test report
+        uses: dorny/test-reporter@v2
+        with:
+          name: Python Tests
+          path: packages/cli/pytest-results.xml
+          reporter: java-junit
+          fail-on-error: "false"
+          fail-on-empty: "false"
+        continue-on-error: true
+        if: always()
       - name: Run property-based tests
         run: |-
           if [ ! -f pyproject.toml ]; then
