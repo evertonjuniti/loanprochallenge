@@ -15,7 +15,7 @@ Developer-facing CLI for the LoanPro Golden Path. It connects a service reposito
 | `devex validate` | Run `devex check`, lint, unit tests, property tests, and contract tests in sequence |
 | `devex hooks install` | Render and install `commit-msg` and `pre-push` Git hooks into `.git/hooks/` (local only) |
 | `devex hooks install --shared` | Same but writes to `.githooks/` and sets `git core.hooksPath` — hooks can be committed and shared across the team |
-| `devex upgrade --workflow-version v0.3.1` | Update the pinned workflow ref across `devex.yaml` and `.github/workflows/devex-pr.yml` |
+| `devex upgrade --workflow-version v0.3.2` | Update the pinned workflow ref across `devex.yaml` and `.github/workflows/devex-pr.yml` |
 
 ---
 
@@ -87,7 +87,7 @@ Flags:
 --owner / -o         Team name (e.g. payments-platform)
 --app-language / -l  Runtime language: python | go | typescript | clojure | java | rust
 --infra / -i         Infra framework: aws-cdk-typescript | terraform | pulumi | none
---workflow-ref       Workflow framework version tag (e.g. v0.3.1)
+--workflow-ref       Workflow framework version tag (e.g. v0.3.2)
 --force / -f         Overwrite existing files
 --skip-check         Skip the final devex check step
 ```
@@ -146,8 +146,8 @@ Use `--shared` when you want hooks committed to the repository so every team mem
 ### Upgrade the workflow framework version
 
 ```bash
-devex upgrade --workflow-version v0.3.1
-devex upgrade --workflow-version v0.3.1 --dry-run  # preview changes only
+devex upgrade --workflow-version v0.3.2
+devex upgrade --workflow-version v0.3.2 --dry-run  # preview changes only
 ```
 
 Updates every occurrence of the old ref in `devex.yaml` and `.github/workflows/devex-pr.yml`.
@@ -183,7 +183,7 @@ environments:
     githubEnvironment: production
 
 workflowVersion:
-  ref: v0.3.1                    # must be a semver tag or full 40-char SHA
+  ref: v0.3.2                    # must be a semver tag or full 40-char SHA
 ```
 
 Full reference: [devex.schema.json](../workflow-framework/devex.schema.json).
