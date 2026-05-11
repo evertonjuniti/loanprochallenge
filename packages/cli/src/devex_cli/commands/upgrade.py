@@ -82,6 +82,13 @@ def upgrade(
         console.print(f"[bold red]✗[/] {exc}")
         raise typer.Exit(1)
 
+    if cfg.workflowVersion is None:
+        console.print(
+            "[bold red]✗[/] devex.yaml is missing the [bold]workflowVersion.ref[/] field. "
+            "Add it manually or re-run [bold]devex init --force[/] to regenerate the file."
+        )
+        raise typer.Exit(1)
+
     old_ref = cfg.workflowVersion.ref
 
     if old_ref == workflow_version:

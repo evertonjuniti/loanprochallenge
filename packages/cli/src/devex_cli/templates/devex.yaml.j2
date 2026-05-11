@@ -78,6 +78,14 @@ environments:
 
 telemetry:
   sink: github-artifact
+
+# ---------------------------------------------------------------------------
+# workflowVersion — pin the centralized reusable workflow ref used by this
+# service. Keep this in sync with the @ref in devex-pr.yml. Run
+# `devex upgrade --workflow-version <tag>` to bump both atomically.
+# ---------------------------------------------------------------------------
+workflowVersion:
+  ref: {{ workflow_ref }}
   auditFormat: ndjson
 
 # ---------------------------------------------------------------------------
