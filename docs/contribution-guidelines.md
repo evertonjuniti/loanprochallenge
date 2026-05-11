@@ -82,9 +82,23 @@ Before writing code, open an issue or create a work item describing:
 git clone https://github.com/evertonjuniti/loanprochallenge.git
 cd loanprochallenge
 
+# Install git hooks (one-time, per clone)
+node scripts/install-hooks.mjs
+
 # Create your branch with the Work ID
 git checkout -b feature/DEVEX-12-add-rust-adapter
 ```
+
+The `install-hooks.mjs` script configures git to use the `.githooks/` directory.
+The **pre-push** hook then runs automatically before every `git push`, catching
+failures locally before they reach CI:
+
+| Package | Checks |
+|---|---|
+| `workflow-framework` | TypeScript typecheck, ESLint, Vitest unit tests |
+| `cli` | ruff lint, pytest |
+
+Use `git push --no-verify` only in a genuine emergency.
 
 ### 3. Make your changes
 

@@ -13,7 +13,8 @@ Developer-facing CLI for the LoanPro Golden Path. It connects a service reposito
 | `devex branch WORK-ID [description]` | Create a correctly-named branch: `feature/FIN-123-add-payment-validation` |
 | `devex pr --title "..."` | Open a PR via the GitHub CLI with the Work ID auto-prepended to the title |
 | `devex validate` | Run `devex check`, lint, unit tests, property tests, and contract tests in sequence |
-| `devex hooks install` | Render and install `commit-msg` and `pre-push` Git hooks from `devex.yaml` settings |
+| `devex hooks install` | Render and install `commit-msg` and `pre-push` Git hooks into `.git/hooks/` (local only) |
+| `devex hooks install --shared` | Same but writes to `.githooks/` and sets `git core.hooksPath` — hooks can be committed and shared across the team |
 | `devex upgrade --workflow-version v0.3.0` | Update the pinned workflow ref across `devex.yaml` and `.github/workflows/devex-pr.yml` |
 
 ---
@@ -134,9 +135,13 @@ Runs in order: `devex check` → lint → unit tests → property tests → cont
 ### Install or refresh Git hooks
 
 ```bash
-devex hooks install          # install commit-msg and pre-push hooks
-devex hooks install --force  # overwrite existing hooks
+devex hooks install                  # install into .git/hooks/ (local only)
+devex hooks install --force          # overwrite existing hooks
+devex hooks install --shared         # write to .githooks/ + set core.hooksPath
+devex hooks install --shared --force # regenerate shared hooks after devex.yaml changes
 ```
+
+Use `--shared` when you want hooks committed to the repository so every team member gets them automatically. After cloning a repo with `.githooks/`, team members only need to run `devex hooks install --shared` once to activate them.
 
 ### Upgrade the workflow framework version
 

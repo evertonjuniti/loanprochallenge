@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# .githooks/pre-push
+#
+# Runs fast local validation before pushing commits to the remote.
+# Covers both packages in this monorepo so CI failures are caught early.
+#
+# Install once (from repo root):
+#   node scripts/install-hooks.mjs
+#
+# Skip in an emergency (not recommended):
+#   git push --no-verify
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo ""
+echo "╔══════════════════════════════════════════╗"
+echo "║         pre-push validation              ║"
+echo "╚══════════════════════════════════════════╝"
+
+# ---------------------------------------------------------------------------
+# 1. workflow-framework — TypeScript typecheck + lint + unit tests
+# ---------------------------------------------------------------------------
+echo ""
+echo "▶ [workflow-framework] typecheck"
+pnpm --filter @loanpro/devex-workflow-framework typecheck
+
+echo "▶ [workflow-framework] lint"
+pnpm --filter @loanpro/devex-workflow-framework lint
+
+echo "▶ [workflow-framework] tests"
+pnpm --filter @loanpro/devex-workflow-framework test
+
+# ---------------------------------------------------------------------------
+# 2. cli — ruff lint + pytest
+# ---------------------------------------------------------------------------
+echo ""
+echo "▶ [cli] sync dependencies (frozen)"
+(cd packages/cli && uv sync --frozen --extra dev --quiet)
+
+echo "▶ [cli] ruff lint"
+(cd packages/cli && uv run ruff check src tests)
+
+echo "▶ [cli] pytest"
+(cd packages/cli && uv run pytest)
+
+echo ""
+echo "✓ All checks passed — push allowed."
+echo ""

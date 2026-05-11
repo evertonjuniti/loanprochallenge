@@ -17,10 +17,13 @@ loanprochallenge/
 ├── packages/
 │   ├── workflow-framework/   ← Component B — TypeScript library (npm package)
 │   └── cli/                  ← Component A — Python CLI (pip package)
+├── .githooks/                ← committed Git hooks (activated by install-hooks.mjs)
+│   └── pre-push              ← runs workflow-framework + CLI checks before every push
 ├── docs/
 │   └── contribution-guidelines.md
 └── scripts/
     ├── generate-workflows.mjs   ← regenerate .github/workflows/ from devex.yaml
+    ├── install-hooks.mjs        ← one-time hook activation per clone
     ├── setup-repo.mjs           ← apply GitHub branch protection rules
     └── check-governance.mjs     ← validate branch, commits, and PR title in CI
 ```
@@ -70,7 +73,8 @@ A Python CLI that developers run locally inside their service repositories. It i
 | `devex branch FIN-123 "description"` | Create a compliant branch: `feature/FIN-123-description` |
 | `devex pr --title "..."` | Open a PR via the GitHub CLI with the Work ID prepended to the title |
 | `devex validate` | Run `devex check`, lint, and all test commands from `devex.yaml` |
-| `devex hooks install` | Render and install `commit-msg` and `pre-push` Git hooks |
+| `devex hooks install` | Render and install `commit-msg` and `pre-push` Git hooks into `.git/hooks/` |
+| `devex hooks install --shared` | Same as above but writes to `.githooks/` and sets `core.hooksPath` — hooks are committed to the repo and shared across the team |
 | `devex upgrade --workflow-version v0.3.0` | Update the pinned framework ref across `devex.yaml` and the caller workflow |
 
 → Full docs: [`packages/cli/README.md`](packages/cli/README.md)
@@ -196,6 +200,9 @@ const api = new GoldenLambdaApi(this, "TransactionifyApi", {
 git clone https://github.com/evertonjuniti/loanprochallenge.git
 cd loanprochallenge
 
+# Activate the committed Git hooks (one-time per clone)
+node scripts/install-hooks.mjs
+
 # Install Node.js dependencies for the workflow-framework package
 cd packages/workflow-framework
 pnpm install
@@ -248,11 +255,12 @@ Quick reference:
 | Step | Action |
 |---|---|
 | 1 | Open an issue or work item; get a `DEVEX-<n>` ID |
-| 2 | Branch: `feature/DEVEX-<n>-<description>` |
-| 3 | Commits: `[DEVEX-<n>] Short description` |
-| 4 | Run `pnpm test` (TypeScript) and `pytest` (Python) — both must pass |
-| 5 | PR title: `[DEVEX-<n>] Short description` |
-| 6 | Two approving reviews required before merge |
+| 2 | Clone and run `node scripts/install-hooks.mjs` (one-time) |
+| 3 | Branch: `feature/DEVEX-<n>-<description>` |
+| 4 | Commits: `[DEVEX-<n>] Short description` |
+| 5 | Run `pnpm test` (TypeScript) and `pytest` (Python) — both must pass |
+| 6 | PR title: `[DEVEX-<n>] Short description` |
+| 7 | Two approving reviews required before merge |
 
 **What you can contribute:**
 

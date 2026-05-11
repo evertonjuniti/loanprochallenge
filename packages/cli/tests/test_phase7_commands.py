@@ -357,6 +357,97 @@ class TestHooksInstall:
         )
         assert result.exit_code != 0
 
+    def test_shared_writes_to_githooks_dir(self, tmp_path: Path):
+        repo = _make_repo(tmp_path)
+        with patch("devex_cli.commands.hooks.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            result = runner.invoke(
+                app,
+                [
+                    "hooks", "install",
+                    "--config", str(repo / "devex.yaml"),
+                    "--root", str(repo),
+                    "--shared",
+                ],
+            )
+        assert result.exit_code == 0
+        assert (repo / ".githooks" / "commit-msg").exists()
+        assert (repo / ".githooks" / "pre-push").exists()
+
+    def test_shared_does_not_write_to_git_hooks_dir(self, tmp_path: Path):
+        repo = _make_repo(tmp_path)
+        with patch("devex_cli.commands.hooks.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            runner.invoke(
+                app,
+                [
+                    "hooks", "install",
+                    "--config", str(repo / "devex.yaml"),
+                    "--root", str(repo),
+                    "--shared",
+                ],
+            )
+        assert not (repo / ".git" / "hooks" / "commit-msg").exists()
+        assert not (repo / ".git" / "hooks" / "pre-push").exists()
+
+    def test_shared_sets_core_hookspath(self, tmp_path: Path):
+        repo = _make_repo(tmp_path)
+        with patch("devex_cli.commands.hooks.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            runner.invoke(
+                app,
+                [
+                    "hooks", "install",
+                    "--config", str(repo / "devex.yaml"),
+                    "--root", str(repo),
+                    "--shared",
+                ],
+            )
+        mock_run.assert_called_once_with(
+            ["git", "config", "core.hooksPath", ".githooks"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+
+    def test_shared_hooks_are_executable(self, tmp_path: Path):
+        import os
+
+        repo = _make_repo(tmp_path)
+        with patch("devex_cli.commands.hooks.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            runner.invoke(
+                app,
+                [
+                    "hooks", "install",
+                    "--config", str(repo / "devex.yaml"),
+                    "--root", str(repo),
+                    "--shared",
+                ],
+            )
+        for name in ("commit-msg", "pre-push"):
+            hook = repo / ".githooks" / name
+            assert os.access(hook, os.X_OK), f"{name} is not executable"
+
+    def test_shared_git_config_failure_exits_nonzero(self, tmp_path: Path):
+        import subprocess as sp
+
+        repo = _make_repo(tmp_path)
+        with patch(
+            "devex_cli.commands.hooks.subprocess.run",
+            side_effect=sp.CalledProcessError(1, "git"),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "hooks", "install",
+                    "--config", str(repo / "devex.yaml"),
+                    "--root", str(repo),
+                    "--shared",
+                ],
+            )
+        assert result.exit_code != 0
+
 
 # ===========================================================================
 # devex upgrade
