@@ -80,6 +80,16 @@ export function createPrWorkflow(
     name: "PR Pipeline",
     on: {
       workflow_dispatch: {},
+      workflow_call: {
+        inputs: {
+          "config-path": {
+            description: "Path to devex.yaml in the caller repository.",
+            required: false,
+            type: "string",
+            default: "devex.yaml",
+          },
+        },
+      },
       pull_request: {
         types: [
           "opened",

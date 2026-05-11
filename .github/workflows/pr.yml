@@ -7,6 +7,13 @@
 name: PR Pipeline
 on:
   workflow_dispatch: {}
+  workflow_call:
+    inputs:
+      config-path:
+        description: Path to devex.yaml in the caller repository.
+        required: false
+        type: string
+        default: devex.yaml
   pull_request:
     types:
       - opened
@@ -100,7 +107,7 @@ jobs:
       - id: validate-workflow-ref
         name: Validate workflow framework ref
         env:
-          WORKFLOW_REF: v0.3.1
+          WORKFLOW_REF: v0.3.2
         run: |-
           node --input-type=module << 'DEVEX_REF_CHECK'
           const ref = process.env.WORKFLOW_REF ?? "";

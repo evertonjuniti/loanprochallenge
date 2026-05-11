@@ -139,6 +139,20 @@ describe("createPrWorkflow", () => {
     expect(pr.types).toContain("synchronize");
     expect(pr.types).toContain("ready_for_review");
   });
+
+  it("includes workflow_call trigger so external repos can reuse it", () => {
+    const wf = createPrWorkflow(TRANSACTIONIFY);
+    expect(wf.on).toHaveProperty("workflow_call");
+  });
+
+  it("workflow_call trigger exposes a config-path input", () => {
+    const wf = createPrWorkflow(TRANSACTIONIFY);
+    const wc = wf.on["workflow_call"] as {
+      inputs: Record<string, { required: boolean; type: string; default?: string }>;
+    };
+    expect(wc.inputs).toHaveProperty("config-path");
+    expect(wc.inputs["config-path"].type).toBe("string");
+  });
 });
 
 // ---------------------------------------------------------------------------
