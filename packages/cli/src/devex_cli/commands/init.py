@@ -14,6 +14,7 @@ Steps performed:
 
 from __future__ import annotations
 
+import re
 import stat
 from datetime import date
 from pathlib import Path
@@ -127,6 +128,10 @@ def init(
             f"Supported: {', '.join(_SUPPORTED_INFRA)}"
         )
         raise typer.Exit(1)
+
+    # Normalize: add "v" prefix for bare semver tags (e.g. "0.3.1" → "v0.3.1").
+    if re.match(r"^\d+\.\d+\.\d+", workflow_ref):
+        workflow_ref = f"v{workflow_ref}"
 
     defaults = LANGUAGE_DEFAULTS[app_language]
 

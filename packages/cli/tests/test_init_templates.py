@@ -83,6 +83,18 @@ class TestInitDevexYaml:
         cfg = yaml.safe_load((tmp_path / "devex.yaml").read_text())
         assert cfg["workflowVersion"]["ref"] == "v0.2.4"
 
+    def test_workflow_ref_bare_semver_gets_v_prefix(self, tmp_path: Path):
+        """A bare semver like '0.3.1' should be normalised to 'v0.3.1'."""
+        _run_init(tmp_path, workflow_ref="0.3.1")
+        cfg = yaml.safe_load((tmp_path / "devex.yaml").read_text())
+        assert cfg["workflowVersion"]["ref"] == "v0.3.1"
+
+    def test_workflow_ref_bare_semver_in_caller_workflow(self, tmp_path: Path):
+        """The normalised ref should also appear in the caller workflow file."""
+        _run_init(tmp_path, workflow_ref="0.3.1")
+        content = (tmp_path / ".github" / "workflows" / "devex-pr.yml").read_text()
+        assert "@v0.3.1" in content
+
     def test_environments_are_generated(self, tmp_path: Path):
         _run_init(tmp_path, service="my-svc")
         cfg = yaml.safe_load((tmp_path / "devex.yaml").read_text())
