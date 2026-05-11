@@ -43,7 +43,7 @@ wheels = [
 
 [[package]]
 name = "devex-cli"
-version = "0.1.2"
+version = "0.1.4"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
