@@ -89,7 +89,7 @@ def check(
     since = cfg.workTracking.sinceCommit
     messages = recent_commits(commits, since_commit=since)
     commit_label = (
-        f"Commit Work IDs (since init)" if since else f"Commit Work IDs (last {commits})"
+        "Commit Work IDs (since init)" if since else f"Commit Work IDs (last {commits})"
     )
     if not messages:
         no_commits_detail = (
