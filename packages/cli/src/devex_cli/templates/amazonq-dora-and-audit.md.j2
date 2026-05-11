@@ -1,0 +1,32 @@
+# DORA and Audit Telemetry — {{ service_name }}
+
+## Required events
+
+Every deployment must emit the following audit events through the shared
+telemetry module in `@loanpro/devex-workflow-framework`:
+
+- `deployment_requested`
+- `deployment_succeeded` or `deployment_failed`
+
+Each event must carry: `workId`, `repository`, `sha`, `actor`, `environment`,
+`stage`, `timestamp`, `workflowRunId`.
+
+## DORA metrics collected
+
+| Metric | Source |
+|--------|--------|
+| Deployment Frequency | Count `deployment_succeeded` events in production |
+| Lead Time for Changes | `deployment_succeeded.timestamp` − first commit for same Work ID |
+| Change Failure Rate | Failed deployments ÷ total production deployments |
+| MTTR | `fix_deployed.timestamp` − `incident_detected.timestamp` |
+
+## Telemetry sink
+
+Sink: `{{ telemetry_sink }}`
+Format: NDJSON
+
+## Rules
+
+- All events must use the shared schema from the workflow-framework.
+- Do not emit events outside the telemetry module.
+- Every Work ID in a deployment event must match the branch and commit.

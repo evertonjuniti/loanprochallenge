@@ -7,7 +7,7 @@ import type { LanguageAdapter, WorkflowStep } from "./language-adapter.js";
 
 const DEFAULTS = {
   /** uv is the recommended package manager for Python services in LoanPro. */
-  setup: "uv sync --frozen",
+  setup: "uv sync --frozen --extra dev",
   unit: "uv run pytest tests/unit",
   property: "uv run pytest tests/property",
   contract: "uv run pytest tests/contracts",
@@ -47,6 +47,17 @@ function withPyprojectGuard(cmd: string): string {
   ].join("\n");
 }
 
+/**
+ * Returns the configured `ci.smallTests.workingDirectory`, or `undefined`.
+ * When set, every `run`-based adapter step will include `working-directory`
+ * so that the `pyproject.toml` guard and all Python commands run from the
+ * correct subdirectory (e.g. `packages/cli` in a monorepo).
+ */
+function spreadWorkingDirectory(config: DevexConfig): { workingDirectory: string } | Record<string, never> {
+  const wd = config.ci?.smallTests?.python?.workingDirectory ?? config.ci?.smallTests?.workingDirectory;
+  return wd !== undefined ? { workingDirectory: wd } : {};
+}
+
 // ---------------------------------------------------------------------------
 // PythonAdapter
 // ---------------------------------------------------------------------------
@@ -75,7 +86,7 @@ export class PythonAdapter implements LanguageAdapter {
    * Steps:
    * 1. actions/setup-python — installs the configured Python version.
    * 2. Install uv — the package manager used by LoanPro Python services.
-   * 3. uv sync --frozen — installs dependencies from the lockfile.
+   * 3. uv sync --frozen --extra dev — installs dependencies (including dev extras) from the lockfile.
    */
   setupSteps(config: DevexConfig): WorkflowStep[] {
     return [
@@ -100,6 +111,7 @@ export class PythonAdapter implements LanguageAdapter {
             ? DEFAULTS.setup
             : DEFAULTS.setup
         ),
+        ...spreadWorkingDirectory(config),
       },
     ];
   }
@@ -109,11 +121,12 @@ export class PythonAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.unit`, falls back to `uv run pytest tests/unit`.
    */
   unitTestSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.unit, DEFAULTS.unit);
+    const cmd = firstDefined(config.ci?.smallTests?.python?.unit, config.ci?.smallTests?.unit, DEFAULTS.unit);
     return [
       {
         name: "Run unit tests",
         run: withPyprojectGuard(cmd),
+        ...spreadWorkingDirectory(config),
       },
     ];
   }
@@ -123,11 +136,12 @@ export class PythonAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.property`, falls back to `uv run pytest tests/property`.
    */
   propertyTestSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.property, DEFAULTS.property);
+    const cmd = firstDefined(config.ci?.smallTests?.python?.property, config.ci?.smallTests?.property, DEFAULTS.property);
     return [
       {
         name: "Run property-based tests",
         run: withPyprojectGuard(cmd),
+        ...spreadWorkingDirectory(config),
       },
     ];
   }
@@ -137,11 +151,12 @@ export class PythonAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.contract`, falls back to `uv run pytest tests/contracts`.
    */
   contractTestSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.contract, DEFAULTS.contract);
+    const cmd = firstDefined(config.ci?.smallTests?.python?.contract, config.ci?.smallTests?.contract, DEFAULTS.contract);
     return [
       {
         name: "Run contract tests",
         run: withPyprojectGuard(cmd),
+        ...spreadWorkingDirectory(config),
       },
     ];
   }
@@ -151,11 +166,12 @@ export class PythonAdapter implements LanguageAdapter {
    * Prefers `config.ci.smallTests.lint`, falls back to `uv run ruff check .`.
    */
   lintSteps(config: DevexConfig): WorkflowStep[] {
-    const cmd = firstDefined(config.ci?.smallTests?.lint, DEFAULTS.lint);
+    const cmd = firstDefined(config.ci?.smallTests?.python?.lint, config.ci?.smallTests?.lint, DEFAULTS.lint);
     return [
       {
         name: "Lint (ruff)",
         run: withPyprojectGuard(cmd),
+        ...spreadWorkingDirectory(config),
       },
     ];
   }

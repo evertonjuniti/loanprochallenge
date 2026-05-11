@@ -26,28 +26,42 @@ const ADAPTER_REGISTRY: Partial<Record<AppLanguage, LanguageAdapter>> = {
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns all LanguageAdapters for the given config.
+ * When `runtime.appLanguage` is an array (polyglot repo), one adapter is
+ * returned per language in declaration order.
+ * Throws if any language has no registered adapter.
+ */
+export function resolveAdapters(config: DevexConfig): LanguageAdapter[] {
+  const appLanguage = config.runtime.appLanguage;
+  const languages = Array.isArray(appLanguage) ? appLanguage : [appLanguage];
+  return languages.map((lang) => {
+    const adapter = ADAPTER_REGISTRY[lang];
+    if (!adapter) {
+      const supported = Object.keys(ADAPTER_REGISTRY).join(", ");
+      throw new Error(
+        `No language adapter registered for "${lang}". ` +
+          `Supported languages: ${supported}. ` +
+          `To add support, implement LanguageAdapter and register it in src/adapters/index.ts.`
+      );
+    }
+    return adapter;
+  });
+}
+
+/**
  * Returns the LanguageAdapter for the given config's `runtime.appLanguage`.
  * Throws a descriptive error if no adapter is registered for that language,
  * which surfaces as an actionable message in both CI and local checks.
+ *
+ * When `appLanguage` is an array, returns the adapter for the first language.
+ * For polyglot repos use `resolveAdapters()` instead.
  *
  * @example
  * const adapter = resolveAdapter(config);
  * const steps = adapter.setupSteps(config);
  */
 export function resolveAdapter(config: DevexConfig): LanguageAdapter {
-  const language = config.runtime.appLanguage;
-  const adapter = ADAPTER_REGISTRY[language];
-
-  if (!adapter) {
-    const supported = Object.keys(ADAPTER_REGISTRY).join(", ");
-    throw new Error(
-      `No language adapter registered for "${language}". ` +
-        `Supported languages: ${supported}. ` +
-        `To add support, implement LanguageAdapter and register it in src/adapters/index.ts.`
-    );
-  }
-
-  return adapter;
+  return resolveAdapters(config)[0]!;
 }
 
 /**

@@ -1,0 +1,28 @@
+# Product Context — {{ service_name }}
+
+## Service identity
+
+- Name: {{ service_name }}
+- Owner: {{ owner }}
+- Type: {{ service_type }}
+- Language: {{ app_language }} ({{ language_display }})
+- Infrastructure: {{ infra_framework }}
+
+## Purpose
+
+{{ service_name }} is a microservice owned by the {{ owner }} team. It follows
+the LoanPro Golden Path: the application logic is written in {{ app_language }}
+and the infrastructure is managed with {{ infra_framework }}.
+
+## Deployment environments
+
+| Environment | CDK Stack |
+|-------------|-----------|
+| sandbox | {{ service_pascal }}Sandbox |
+| staging | {{ service_pascal }}Staging |
+| production | {{ service_pascal }}Production |
+
+## Work tracking
+
+Work IDs follow the pattern `{{ work_id_pattern }}` (e.g. FIN-123).
+Every branch, commit, and PR title must reference a valid Work ID.

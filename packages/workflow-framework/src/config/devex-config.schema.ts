@@ -60,7 +60,11 @@ export const InfraFrameworkSchema = z.enum([
 ]);
 
 export const RuntimeSchema = z.object({
-  appLanguage: AppLanguageSchema,
+  /**
+   * Application language(s). Use a single string for single-language repos;
+   * use an array for polyglot monorepos (e.g. `[typescript, python]`).
+   */
+  appLanguage: z.union([AppLanguageSchema, z.array(AppLanguageSchema).min(1)]),
   infraLanguage: z.enum(["typescript", "python", "go", "hcl", "none"]).default("typescript"),
   infraFramework: InfraFrameworkSchema.default("aws-cdk-typescript"),
 });
@@ -80,12 +84,33 @@ export const LocalCommandsSchema = z.object({
 // CI configuration
 // ---------------------------------------------------------------------------
 
-export const SmallTestsConfigSchema = z.object({
+/**
+ * Shared command-override fields used both at the top level and inside
+ * per-language sub-sections of `SmallTestsConfigSchema`.
+ */
+const SmallTestsLanguageConfigSchema = z.object({
   unit: z.string().optional(),
   property: z.string().optional(),
   contract: z.string().optional(),
   lint: z.string().optional(),
   typecheck: z.string().optional(),
+  /**
+   * Working directory for all test steps of this language.
+   * Relative to the repository root. Used by the Python adapter to locate
+   * `pyproject.toml` in a subdirectory (e.g. a monorepo's `packages/cli`).
+   */
+  workingDirectory: z.string().optional(),
+});
+
+export const SmallTestsConfigSchema = SmallTestsLanguageConfigSchema.extend({
+  /**
+   * Per-language command overrides for polyglot repos.
+   * When present, the adapter for that language reads from here first,
+   * then falls back to the top-level fields, then to adapter defaults.
+   * Top-level fields are still used for single-language repos.
+   */
+  typescript: SmallTestsLanguageConfigSchema.optional(),
+  python: SmallTestsLanguageConfigSchema.optional(),
 });
 
 export const CdkConfigSchema = z.object({

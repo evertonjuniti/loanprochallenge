@@ -29,6 +29,20 @@ Thumbs.db
 # Editor
 .idea/
 
+# Python bytecode and test caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+
+# Test output artefacts (generated at runtime, not source)
+packages/workflow-framework/test/__tmp_sink__/
+
 # Telemetry artefacts generated at runtime (not source)
 .devex/
 dora-events.ndjson

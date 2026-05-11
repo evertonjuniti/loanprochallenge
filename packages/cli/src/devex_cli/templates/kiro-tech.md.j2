@@ -1,0 +1,49 @@
+# Technical Context — {{ service_name }}
+
+## Stack
+
+- Application: {{ app_language }} — {{ language_display }}
+- Infrastructure: {{ infra_framework }}
+- Package manager: {{ package_manager }}
+- Test framework: see ci.smallTests in devex.yaml
+
+## Local development
+
+```bash
+# Install dependencies
+{{ setup_hint }}
+
+# Run tests
+{{ local_test }}
+
+# Lint
+{{ local_lint }}
+
+# Validate Golden Path compliance
+devex check
+```
+
+## CI pipeline (workflow-framework v{{ workflow_ref }})
+
+The CI pipeline is defined centrally in the DevEx workflow framework and
+activated by `.github/workflows/devex-pr.yml`.
+
+The **language adapter** selected for this service is: `{{ app_language }}`
+
+This adapter runs the following CI steps automatically:
+- Setup: `{{ ci_setup }}`
+- Unit tests: `{{ ci_unit }}`
+- Property tests: `{{ ci_property }}`
+- Contract tests: `{{ ci_contract }}`
+- Lint: `{{ ci_lint }}`
+
+To override a command, edit `ci.smallTests` in `devex.yaml`.
+
+## Infrastructure
+
+All AWS resources are defined with AWS CDK in {{ infra_language }}.
+CDK working directory: `{{ cdk_dir }}/`
+
+{% for note in language_notes %}
+- {{ note }}
+{% endfor %}

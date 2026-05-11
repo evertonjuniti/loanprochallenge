@@ -1,0 +1,41 @@
+# Golden Path Standards — {{ service_name }}
+
+This file provides Amazon Q Developer with context about the LoanPro Golden
+Path conventions that apply to this repository.
+
+## Work ID convention
+
+Every branch, commit message, and PR title must include a Work ID.
+
+- Branch pattern: `{{ branch_pattern }}`
+- Commit pattern: `{{ commit_pattern }}`
+- PR title pattern: `{{ pr_title_pattern }}`
+
+Example: `feature/FIN-123-add-validation` / `[FIN-123] Add validation`
+
+## Language and tooling
+
+- Application language: **{{ app_language }}** ({{ language_display }})
+- Infrastructure framework: **{{ infra_framework }}**
+- Test command: `{{ local_test }}`
+- Lint command: `{{ local_lint }}`
+
+## CI pipeline
+
+This repository calls the centralized DevEx reusable workflow at
+`@{{ workflow_ref }}`. The pipeline runs:
+
+1. Governance (Work ID, PR template, reviewer count)
+2. Small Tests (unit, property, contract, lint)
+3. CDK synth
+4. Sequential deployment: sandbox → staging → production
+5. DORA and audit telemetry
+
+Do not duplicate pipeline logic here. Customise via `devex.yaml`.
+
+## Forbidden patterns
+
+- Do not hardcode AWS account IDs or credentials.
+- Do not merge without two approving reviews.
+- Do not push directly to `main`.
+- Do not modify `.github/workflows/devex-pr.yml` — use `devex upgrade` instead.

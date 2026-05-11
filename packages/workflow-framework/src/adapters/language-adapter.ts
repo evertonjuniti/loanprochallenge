@@ -35,6 +35,12 @@ export interface WorkflowStep {
 
   /** Condition expression (GitHub Actions `if:` syntax). */
   condition?: string;
+
+  /**
+   * Override the working directory for this step.
+   * Maps to GitHub Actions `working-directory`. Only applies to `run` steps.
+   */
+  workingDirectory?: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -16,7 +16,7 @@
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { join, resolve, dirname } from "node:path";
+import { join, resolve } from "node:path";
 import {
   loadConfig,
   createCiWorkflow,
@@ -34,10 +34,6 @@ import {
 function getArg(args: string[], flag: string): string | undefined {
   const idx = args.indexOf(flag);
   return idx !== -1 ? args[idx + 1] : undefined;
-}
-
-function hasFlag(args: string[], flag: string): boolean {
-  return args.includes(flag);
 }
 
 // ---------------------------------------------------------------------------

@@ -199,3 +199,107 @@ describe("supportedLanguages", () => {
     expect(supportedLanguages()).toContain("python");
   });
 });
+
+// ---------------------------------------------------------------------------
+// PythonAdapter — workingDirectory support
+// ---------------------------------------------------------------------------
+
+describe("PythonAdapter workingDirectory", () => {
+  const adapter = new PythonAdapter();
+
+  const monoConfig: DevexConfig = {
+    ...baseConfig,
+    ci: { smallTests: { workingDirectory: "packages/cli" } },
+  };
+
+  it("setup install step has workingDirectory when configured", () => {
+    const steps = adapter.setupSteps(monoConfig);
+    // The first two steps use actions/* — no workingDirectory needed.
+    // The third step (run: uv sync) should carry the workingDirectory.
+    const installStep = steps.find((s) => s.run?.includes("uv sync"));
+    expect(installStep?.workingDirectory).toBe("packages/cli");
+  });
+
+  it("unit test step has workingDirectory when configured", () => {
+    const [step] = adapter.unitTestSteps(monoConfig);
+    expect(step!.workingDirectory).toBe("packages/cli");
+  });
+
+  it("property test step has workingDirectory when configured", () => {
+    const [step] = adapter.propertyTestSteps(monoConfig);
+    expect(step!.workingDirectory).toBe("packages/cli");
+  });
+
+  it("contract test step has workingDirectory when configured", () => {
+    const [step] = adapter.contractTestSteps(monoConfig);
+    expect(step!.workingDirectory).toBe("packages/cli");
+  });
+
+  it("lint step has workingDirectory when configured", () => {
+    const [step] = adapter.lintSteps(monoConfig);
+    expect(step!.workingDirectory).toBe("packages/cli");
+  });
+
+  it("workingDirectory is undefined when not configured", () => {
+    const [unitStep] = adapter.unitTestSteps(baseConfig);
+    expect(unitStep!.workingDirectory).toBeUndefined();
+  });
+
+  it("toGithubStep maps workingDirectory to working-directory", async () => {
+    const { toGithubStep } = await import("../src/github/types.js");
+    const step = { name: "test", run: "uv run pytest", workingDirectory: "packages/cli" };
+    const githubStep = toGithubStep(step);
+    expect(githubStep["working-directory"]).toBe("packages/cli");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PythonAdapter — per-language config (polyglot repos)
+// ---------------------------------------------------------------------------
+
+describe("PythonAdapter per-language config", () => {
+  const adapter = new PythonAdapter();
+
+  const polyConfig: DevexConfig = {
+    ...baseConfig,
+    runtime: { ...baseConfig.runtime, appLanguage: ["typescript", "python"] },
+    ci: {
+      smallTests: {
+        // top-level overrides
+        unit: "pnpm vitest run",
+        // per-language override for python takes precedence
+        python: {
+          workingDirectory: "packages/cli",
+          unit: "uv run pytest",
+          lint: "uv run ruff check . --select ALL",
+        },
+      },
+    },
+  };
+
+  it("per-language python.unit overrides the top-level unit", () => {
+    const [step] = adapter.unitTestSteps(polyConfig);
+    expect(step!.run).toContain("uv run pytest");
+  });
+
+  it("per-language python.lint overrides the top-level lint", () => {
+    const [step] = adapter.lintSteps(polyConfig);
+    expect(step!.run).toContain("--select ALL");
+  });
+
+  it("per-language python.workingDirectory is used for all run steps", () => {
+    const [unitStep] = adapter.unitTestSteps(polyConfig);
+    expect(unitStep!.workingDirectory).toBe("packages/cli");
+    const [lintStep] = adapter.lintSteps(polyConfig);
+    expect(lintStep!.workingDirectory).toBe("packages/cli");
+  });
+
+  it("falls back to top-level workingDirectory when no per-language key is set", () => {
+    const config: DevexConfig = {
+      ...baseConfig,
+      ci: { smallTests: { workingDirectory: "apps/api" } },
+    };
+    const [step] = adapter.unitTestSteps(config);
+    expect(step!.workingDirectory).toBe("apps/api");
+  });
+});

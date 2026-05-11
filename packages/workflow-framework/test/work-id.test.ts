@@ -9,7 +9,6 @@ import {
   buildBranchName,
   buildCommitMessage,
   buildPrTitle,
-  DEFAULT_WORK_ID_CONFIG,
 } from "../src/index.js";
 
 describe("validateWorkId", () => {

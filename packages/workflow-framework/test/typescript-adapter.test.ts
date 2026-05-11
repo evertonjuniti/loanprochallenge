@@ -203,3 +203,48 @@ describe("supportedLanguages (after typescript added)", () => {
     expect(supportedLanguages()).toContain("python");
   });
 });
+
+// ---------------------------------------------------------------------------
+// TypescriptAdapter — per-language config (polyglot repos)
+// ---------------------------------------------------------------------------
+
+describe("TypescriptAdapter per-language config", () => {
+  const adapter = new TypescriptAdapter();
+
+  const polyConfig: DevexConfig = {
+    ...baseConfig,
+    runtime: { ...baseConfig.runtime, appLanguage: ["typescript", "python"] },
+    ci: {
+      smallTests: {
+        // top-level overrides (would be picked up by single-lang repos)
+        unit: "uv run pytest",
+        // per-language override for typescript takes precedence
+        typescript: { unit: "pnpm vitest run", lint: "pnpm run lint:strict" },
+      },
+    },
+  };
+
+  it("per-language typescript.unit overrides the top-level unit", () => {
+    const [step] = adapter.unitTestSteps(polyConfig);
+    expect(step!.run).toBe("pnpm vitest run");
+  });
+
+  it("per-language typescript.lint overrides the top-level lint", () => {
+    const [step] = adapter.lintSteps(polyConfig);
+    expect(step!.run).toBe("pnpm run lint:strict");
+  });
+
+  it("falls back to top-level override when no per-language key is set", () => {
+    const config: DevexConfig = {
+      ...baseConfig,
+      ci: { smallTests: { unit: "pnpm run test:all" } },
+    };
+    const [step] = adapter.unitTestSteps(config);
+    expect(step!.run).toBe("pnpm run test:all");
+  });
+
+  it("falls back to adapter default when neither override is set", () => {
+    const [step] = adapter.unitTestSteps(baseConfig);
+    expect(step!.run).toBe("pnpm test");
+  });
+});

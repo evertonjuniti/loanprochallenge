@@ -73,9 +73,11 @@
       "additionalProperties": false,
       "properties": {
         "appLanguage": {
-          "type": "string",
-          "enum": ["python", "go", "typescript", "clojure", "java", "rust"],
-          "description": "Primary application language."
+          "description": "Application language(s). Use a string for single-language repos; use an array for polyglot monorepos (e.g. [typescript, python]).",
+          "oneOf": [
+            { "type": "string", "enum": ["python", "go", "typescript", "clojure", "java", "rust"] },
+            { "type": "array", "items": { "type": "string", "enum": ["python", "go", "typescript", "clojure", "java", "rust"] }, "minItems": 1 }
+          ]
         },
         "infraLanguage": {
           "type": "string",
@@ -109,11 +111,37 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "unit":      { "type": "string" },
-            "property":  { "type": "string" },
-            "contract":  { "type": "string" },
-            "lint":      { "type": "string" },
-            "typecheck": { "type": "string" }
+            "unit":             { "type": "string" },
+            "property":         { "type": "string" },
+            "contract":         { "type": "string" },
+            "lint":             { "type": "string" },
+            "typecheck":        { "type": "string" },
+            "workingDirectory": { "type": "string", "description": "Working directory for all small-test steps. Relative to the repository root." },
+            "typescript": {
+              "type": "object",
+              "description": "Per-language overrides for the TypeScript adapter. Used in polyglot repos.",
+              "additionalProperties": false,
+              "properties": {
+                "unit":      { "type": "string" },
+                "property":  { "type": "string" },
+                "contract":  { "type": "string" },
+                "lint":      { "type": "string" },
+                "typecheck": { "type": "string" }
+              }
+            },
+            "python": {
+              "type": "object",
+              "description": "Per-language overrides for the Python adapter. Used in polyglot repos.",
+              "additionalProperties": false,
+              "properties": {
+                "unit":             { "type": "string" },
+                "property":         { "type": "string" },
+                "contract":         { "type": "string" },
+                "lint":             { "type": "string" },
+                "typecheck":        { "type": "string" },
+                "workingDirectory": { "type": "string", "description": "Working directory for Python test steps." }
+              }
+            }
           }
         },
         "cdk": {
