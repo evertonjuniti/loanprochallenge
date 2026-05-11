@@ -13,6 +13,15 @@ if ! command -v uv &>/dev/null && python -m uv --version &>/dev/null 2>&1; then
   export -f uv
 fi
 
+# Resolve devex — git hooks run with a minimal PATH so the devex entry-point
+# script may not be found even when it works in an interactive terminal.
+# Fall back to "python -m devex_cli" which works as long as the package is
+# installed in the active Python environment.
+if ! command -v devex &>/dev/null; then
+  devex() { python -m devex_cli "$@"; }
+  export -f devex
+fi
+
 echo ""
 echo "  devex: Running pre-push checks for {{ service_name }}…"
 echo ""

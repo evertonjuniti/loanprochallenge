@@ -211,6 +211,17 @@ class TestInitGitHooks:
         content = (tmp_path / ".git" / "hooks" / "commit-msg").read_text()
         assert "\\[" in content or "[A-Z]" in content  # Work ID regex fragment
 
+    def test_pre_push_hook_contains_devex_fallback(self, tmp_path: Path):
+        """Hook must handle devex not being on PATH via python -m devex_cli fallback."""
+        _run_init(tmp_path)
+        content = (tmp_path / ".git" / "hooks" / "pre-push").read_text()
+        assert "python -m devex_cli" in content
+
+    def test_pre_push_hook_calls_devex_check(self, tmp_path: Path):
+        _run_init(tmp_path)
+        content = (tmp_path / ".git" / "hooks" / "pre-push").read_text()
+        assert "devex check" in content
+
 
 # ---------------------------------------------------------------------------
 # Force flag and idempotency
