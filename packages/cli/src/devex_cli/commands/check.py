@@ -86,9 +86,18 @@ def check(
     # ------------------------------------------------------------------
     # 3. Recent commits contain Work IDs
     # ------------------------------------------------------------------
-    messages = recent_commits(commits)
+    since = cfg.workTracking.sinceCommit
+    messages = recent_commits(commits, since_commit=since)
+    commit_label = (
+        f"Commit Work IDs (since init)" if since else f"Commit Work IDs (last {commits})"
+    )
     if not messages:
-        results.append((False, f"Commit Work IDs (last {commits})", "No commits found."))
+        no_commits_detail = (
+            "No commits since DevEx initialisation."
+            if since
+            else "No commits found."
+        )
+        results.append((True, commit_label, no_commits_detail))
     else:
         failed_commits = [
             msg for msg in messages if not validate_commit_message(msg, cfg.workTracking).valid
@@ -97,14 +106,14 @@ def check(
             results.append(
                 (
                     False,
-                    f"Commit Work IDs (last {commits})",
+                    commit_label,
                     f"{len(failed_commits)} commit(s) missing Work ID: "
                     + "; ".join(f'"{m}"' for m in failed_commits[:3]),
                 )
             )
         else:
             results.append(
-                (True, f"Commit Work IDs (last {commits})", f"All {len(messages)} commits valid.")
+                (True, commit_label, f"All {len(messages)} commits valid.")
             )
 
     # ------------------------------------------------------------------

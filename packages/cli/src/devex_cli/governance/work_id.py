@@ -104,11 +104,21 @@ def current_branch() -> Optional[str]:
         return None
 
 
-def recent_commits(n: int = 5) -> list[str]:
-    """Return the first lines of the *n* most recent commit messages."""
+def recent_commits(n: int = 5, since_commit: Optional[str] = None) -> list[str]:
+    """Return the first lines of recent commit messages.
+
+    When *since_commit* is provided (a 40-char SHA recorded at `devex init`
+    time), only commits reachable from HEAD but not from that SHA are returned,
+    effectively ignoring all history that predates the DevEx initialisation.
+    When *since_commit* is absent the *n* most recent commits are returned.
+    """
     try:
+        if since_commit:
+            cmd = ["git", "log", f"{since_commit}..HEAD", "--format=%s"]
+        else:
+            cmd = ["git", "log", f"--max-count={n}", "--format=%s"]
         result = subprocess.run(
-            ["git", "log", f"--max-count={n}", "--format=%s"],
+            cmd,
             capture_output=True,
             text=True,
             check=True,
