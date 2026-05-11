@@ -23,6 +23,7 @@ class WorkTrackingConfig(BaseModel):
     branchPattern: str = "^(feature|fix|chore|hotfix)/[A-Z]+-[0-9]+-[a-z0-9-]+$"
     commitPattern: str = r"^\[[A-Z]+-[0-9]+\] .+"
     prTitlePattern: str = r"^\[[A-Z]+-[0-9]+\] .+"
+    sinceCommit: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

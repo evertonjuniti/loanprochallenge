@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 import stat
+import subprocess
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Optional
@@ -186,6 +187,8 @@ def init(
         "branch_pattern": "^(feature|fix|chore|hotfix)/[A-Z]+-[0-9]+-[a-z0-9-]+$",
         "commit_pattern": r"^\[[A-Z]+-[0-9]+\] .+",
         "pr_title_pattern": r"^\[[A-Z]+-[0-9]+\] .+",
+        # sinceCommit — HEAD SHA at init time; devex check ignores older commits.
+        "since_commit": _head_sha(repo_root),
         # telemetry
         "telemetry_sink": "github-artifact",
         # meta
@@ -318,6 +321,21 @@ def _find_git_root(start: Path) -> Optional[Path]:
         if (directory / ".git").exists():
             return directory
     return None
+
+
+def _head_sha(repo_root: Path) -> Optional[str]:
+    """Return the current HEAD commit SHA, or None when the repo has no commits."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        sha = result.stdout.strip()
+        return sha if len(sha) == 40 else None
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
 
 
 def _to_pascal(slug: str) -> str:

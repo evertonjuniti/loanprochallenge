@@ -95,6 +95,42 @@ class TestInitDevexYaml:
         content = (tmp_path / ".github" / "workflows" / "devex-pr.yml").read_text()
         assert "@v0.3.1" in content
 
+    def test_since_commit_written_when_repo_has_commits(self, tmp_path: Path, monkeypatch):
+        """When the repo has commits, sinceCommit SHA is written to devex.yaml."""
+        fake_sha = "a" * 40
+        import subprocess as _sp
+
+        real_run = _sp.run
+
+        def patched_run(cmd, **kwargs):
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                r = _sp.CompletedProcess(cmd, 0)
+                r.stdout = fake_sha + "\n"
+                r.stderr = ""
+                return r
+            return real_run(cmd, **kwargs)
+
+        monkeypatch.setattr("devex_cli.commands.init.subprocess.run", patched_run)
+        _run_init(tmp_path)
+        cfg = yaml.safe_load((tmp_path / "devex.yaml").read_text())
+        assert cfg["workTracking"]["sinceCommit"] == fake_sha
+
+    def test_since_commit_absent_when_repo_has_no_commits(self, tmp_path: Path, monkeypatch):
+        """When HEAD cannot be resolved (empty repo), sinceCommit is omitted."""
+        import subprocess as _sp
+
+        real_run = _sp.run
+
+        def patched_run(cmd, **kwargs):
+            if "rev-parse" in cmd and "HEAD" in cmd:
+                raise _sp.CalledProcessError(128, cmd)
+            return real_run(cmd, **kwargs)
+
+        monkeypatch.setattr("devex_cli.commands.init.subprocess.run", patched_run)
+        _run_init(tmp_path)
+        cfg = yaml.safe_load((tmp_path / "devex.yaml").read_text())
+        assert cfg["workTracking"].get("sinceCommit") is None
+
     def test_environments_are_generated(self, tmp_path: Path):
         _run_init(tmp_path, service="my-svc")
         cfg = yaml.safe_load((tmp_path / "devex.yaml").read_text())
@@ -210,6 +246,17 @@ class TestInitGitHooks:
         _run_init(tmp_path)
         content = (tmp_path / ".git" / "hooks" / "commit-msg").read_text()
         assert "\\[" in content or "[A-Z]" in content  # Work ID regex fragment
+
+    def test_pre_push_hook_contains_devex_fallback(self, tmp_path: Path):
+        """Hook must handle devex not being on PATH via python -m devex_cli fallback."""
+        _run_init(tmp_path)
+        content = (tmp_path / ".git" / "hooks" / "pre-push").read_text()
+        assert "python -m devex_cli" in content
+
+    def test_pre_push_hook_calls_devex_check(self, tmp_path: Path):
+        _run_init(tmp_path)
+        content = (tmp_path / ".git" / "hooks" / "pre-push").read_text()
+        assert "devex check" in content
 
 
 # ---------------------------------------------------------------------------

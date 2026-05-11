@@ -20,6 +20,8 @@ workTracking:
   branchPattern: "^(feature|fix|chore|hotfix)/[A-Z]+-[0-9]+-[a-z0-9-]+$"
   commitPattern: "^\\[[A-Z]+-[0-9]+\\] .+"
   prTitlePattern: "^\\[[A-Z]+-[0-9]+\\] .+"
+{% if since_commit %}  sinceCommit: "{{ since_commit }}"  # Commits before this SHA (pre-init history) are excluded from validation.
+{% endif %}
 
 # ---------------------------------------------------------------------------
 # runtime — consumed by workflow-framework to select the language adapter.
